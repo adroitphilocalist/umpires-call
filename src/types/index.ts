@@ -42,6 +42,7 @@ export interface Player {
   creditValue: number;
   image?: string;
   stats: PlayerStats;
+  externalId?: string;
 }
 
 export interface PlayerStats {
@@ -62,6 +63,8 @@ export interface Match {
   format: MatchFormat;
   createdAt: Date;
   liveScore?: LiveScore;
+  cricbuzzId?: string;
+  scorecardUrl?: string;
 }
 
 export interface TeamInfo {
@@ -117,4 +120,28 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export interface MatchScoreStats {
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  strikeRate: number;
+  wickets: number;
+  overs: number;
+  maiden: number;
+  economy: number;
+  catches: number;
+  runOuts: number;
+}
+
+export interface MatchScore {
+  _id: string;
+  matchId: string;
+  playerId: string;
+  externalId: string;
+  points: number;
+  stats: MatchScoreStats;
+  lastUpdated: Date;
 }

@@ -61,6 +61,7 @@ export async function seedPlayers() {
       const mappedRole = ROLE_MAP[p.role] || p.role;
       return {
         name: p.name,
+        externalId: p.id,
         role: mappedRole,
         team: TEAM_MAP[p.team] || p.team,
         creditValue: CREDIT_MAP[mappedRole] || 8,

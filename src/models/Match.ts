@@ -9,6 +9,8 @@ export interface IMatch extends Document {
   format: 'T20' | 'ODI' | 'Test';
   season?: string;
   matchNumber?: number;
+  cricbuzzId?: string;
+  scorecardUrl?: string;
   liveScore?: {
     team1Score: string;
     team2Score: string;
@@ -40,6 +42,8 @@ const MatchSchema = new Schema<IMatch>(
     },
     season: { type: String },
     matchNumber: { type: Number },
+    cricbuzzId: { type: String, index: true },
+    scorecardUrl: { type: String },
     liveScore: {
       team1Score: String,
       team2Score: String,

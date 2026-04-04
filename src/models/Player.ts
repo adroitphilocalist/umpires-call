@@ -14,6 +14,7 @@ export interface IPlayer extends Document {
   team: string;
   creditValue: number;
   image?: string;
+  externalId?: string;
   stats: IPlayerStats;
 }
 
@@ -28,6 +29,7 @@ const PlayerSchema = new Schema<IPlayer>(
     team: { type: String, required: true },
     creditValue: { type: Number, required: true, default: 8 },
     image: { type: String },
+    externalId: { type: String, unique: true, sparse: true, index: true },
     stats: {
       matches: { type: Number, default: 0 },
       runs: { type: Number },

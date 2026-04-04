@@ -1,78 +1,91 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import { Match } from '@/models/Match';
+import { MatchScore } from '@/models/MatchScore';
+import { Team } from '@/models/Team';
+import { User } from '@/models/User';
 
 export async function GET(request: Request) {
   try {
     await dbConnect();
-    
+
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get('matchId');
-    
-    const query: any = { status: 'live' };
-    if (matchId) query._id = matchId;
-    
-    const matches = await Match.find(query).lean();
-    
-    const scores = matches.map(m => ({
-      matchId: m._id.toString(),
-      team1: m.team1,
-      team2: m.team2,
-      score: m.liveScore,
-      status: m.status,
-    }));
-    
-    return NextResponse.json({
-      success: true,
-      scores,
-    });
+    const contestId = searchParams.get('contestId');
+
+    if (!matchId && !contestId) {
+      return NextResponse.json(
+        { success: false, error: 'Either matchId or contestId is required' },
+        { status: 400 }
+      );
+    }
+
+    if (matchId) {
+      const scores = await MatchScore.find({ matchId })
+        .populate('playerId')
+        .sort({ points: -1 })
+        .lean();
+
+      return NextResponse.json({
+        success: true,
+        matchId,
+        scores: scores.map((score) => ({
+          _id: score._id.toString(),
+          matchId: score.matchId.toString(),
+          playerId: score.playerId?._id?.toString(),
+          externalId: score.externalId,
+          points: score.points,
+          stats: score.stats,
+          lastUpdated: score.lastUpdated,
+          player: score.playerId ? {
+            _id: (score.playerId as any)._id.toString(),
+            name: (score.playerId as any).name,
+            role: (score.playerId as any).role,
+            team: (score.playerId as any).team,
+            creditValue: (score.playerId as any).creditValue,
+            image: (score.playerId as any).image,
+          } : undefined,
+        })),
+      });
+    }
+
+    if (contestId) {
+      const teams = await Team.find({ contestId })
+        .populate('userId', 'displayName username avatar')
+        .sort({ score: -1 })
+        .lean();
+
+      const leaderboard = teams.map((team, index) => ({
+        _id: team._id.toString(),
+        contestId: team.contestId.toString(),
+        name: team.name,
+        score: team.score,
+        rank: index + 1,
+        user: team.userId ? {
+          _id: (team.userId as any)._id?.toString(),
+          displayName: (team.userId as any).displayName,
+          username: (team.userId as any).username,
+          avatar: (team.userId as any).avatar,
+        } : undefined,
+        players: team.players,
+        captainId: team.captainId.toString(),
+        viceCaptainId: team.viceCaptainId.toString(),
+      }));
+
+      return NextResponse.json({
+        success: true,
+        contestId,
+        leaderboard,
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Invalid request' },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('Error fetching scores:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch scores' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    await dbConnect();
-    
-    const data = await request.json();
-    
-    const match = await Match.findByIdAndUpdate(
-      data.matchId,
-      {
-        $set: {
-          'liveScore.team1Score': data.team1Score,
-          'liveScore.team2Score': data.team2Score,
-          'liveScore.team1Wickets': data.team1Wickets,
-          'liveScore.team2Wickets': data.team2Wickets,
-          'liveScore.team1Overs': data.team1Overs,
-          'liveScore.team2Overs': data.team2Overs,
-          'liveScore.battingTeam': data.battingTeam,
-          status: data.status || 'live',
-        },
-      },
-      { new: true }
-    ).lean();
-    
-    if (!match) {
-      return NextResponse.json(
-        { success: false, error: 'Match not found' },
-        { status: 404 }
-      );
-    }
-    
-    return NextResponse.json({
-      success: true,
-      score: match.liveScore,
-    });
-  } catch (error) {
-    console.error('Error updating score:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update score' },
       { status: 500 }
     );
   }

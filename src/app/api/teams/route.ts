@@ -23,6 +23,14 @@ export async function GET(request: Request) {
       contestId?: { toString(): string };
       name: string;
       score?: number;
+      captainId: { toString(): string };
+      viceCaptainId: { toString(): string };
+      players: Array<{
+        playerId: { toString(): string };
+        name: string;
+        role: string;
+        creditCost: number;
+      }>;
     }>;
     
     const teamsWithUser = await Promise.all(
@@ -36,6 +44,14 @@ export async function GET(request: Request) {
           _id: t._id.toString(),
           userId: t.userId.toString(),
           contestId: t.contestId?.toString(),
+          captainId: t.captainId.toString(),
+          viceCaptainId: t.viceCaptainId.toString(),
+          players: t.players.map(p => ({
+            playerId: p.playerId.toString(),
+            name: p.name,
+            role: p.role,
+            creditCost: p.creditCost,
+          })),
           user: user ? {
             _id: user._id.toString(),
             displayName: user.displayName,
