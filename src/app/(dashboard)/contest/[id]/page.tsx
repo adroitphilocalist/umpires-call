@@ -16,8 +16,9 @@ import {
   PageLoader,
   Input 
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star } from 'lucide-react';
 import { Contest, Match } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface Team {
   _id: string;
@@ -25,6 +26,15 @@ interface Team {
   contestId: string;
   name: string;
   score?: number;
+  rank?: number;
+  captainId: string;
+  viceCaptainId: string;
+  players: Array<{
+    playerId: string;
+    name: string;
+    role: string;
+    creditCost: number;
+  }>;
   user?: {
     _id: string;
     displayName: string;
@@ -43,6 +53,9 @@ export default function ContestDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+  const [playerScores, setPlayerScores] = useState<Record<string, number>>({});
+  const [loadingScores, setLoadingScores] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -93,6 +106,39 @@ export default function ContestDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching teams:', error);
+    }
+  };
+
+  const fetchPlayerScores = async (matchId: string) => {
+    if (!matchId) return;
+    
+    setLoadingScores(true);
+    try {
+      const res = await fetch(`/api/scores?matchId=${matchId}`);
+      const data = await res.json();
+      
+      if (data.success && data.scores) {
+        const scoresMap: Record<string, number> = {};
+        data.scores.forEach((score: any) => {
+          scoresMap[score.playerId] = score.points;
+        });
+        setPlayerScores(scoresMap);
+      }
+    } catch (error) {
+      console.error('Error fetching player scores:', error);
+    } finally {
+      setLoadingScores(false);
+    }
+  };
+
+  const toggleTeamExpand = async (team: Team) => {
+    if (expandedTeamId === team._id) {
+      setExpandedTeamId(null);
+    } else {
+      setExpandedTeamId(team._id);
+      if (contest?.matchId && Object.keys(playerScores).length === 0) {
+        await fetchPlayerScores(contest.matchId);
+      }
     }
   };
 
@@ -312,6 +358,7 @@ export default function ContestDetailPage() {
                   <div className="space-y-3">
                     {teams.map((team, index) => {
                       const rank = index + 1;
+                      const isExpanded = expandedTeamId === team._id;
                       const rankStyles = {
                         1: 'bg-yellow-500/20 text-yellow-400 border-yellow-500',
                         2: 'bg-gray-300/20 text-gray-300 border-gray-300',
@@ -320,29 +367,87 @@ export default function ContestDetailPage() {
                       const rankStyle = rankStyles[rank as keyof typeof rankStyles];
                       
                       return (
-                        <div
-                          key={team._id}
-                          className={`flex items-center gap-4 p-3 rounded-lg bg-surface ${
-                            rank <= 3 ? 'border' : ''
-                          } ${rankStyle || ''}`}
-                        >
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            rank <= 3 ? rankStyle : 'bg-surface text-text-secondary'
-                          }`}>
-                            {rank}
+                        <div key={team._id}>
+                          <div
+                            onClick={() => toggleTeamExpand(team)}
+                            className={`flex items-center gap-4 p-3 rounded-lg bg-surface cursor-pointer hover:bg-surface/80 transition-colors ${
+                              rank <= 3 ? 'border' : ''
+                            } ${rankStyle || ''}`}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                              rank <= 3 ? rankStyle : 'bg-surface text-text-secondary'
+                            }`}>
+                              {rank}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-text-primary truncate">
+                                {team.user?.displayName || 'Unknown Player'}
+                              </p>
+                              <p className="text-sm text-text-secondary truncate">
+                                {team.name}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-accent">{team.score ?? 0}</p>
+                              <p className="text-xs text-text-secondary">pts</p>
+                            </div>
+                            <div className="text-text-secondary">
+                              {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-text-primary truncate">
-                              {team.user?.displayName || 'Unknown Player'}
-                            </p>
-                            <p className="text-sm text-text-secondary truncate">
-                              {team.name}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-accent">{team.score ?? 0}</p>
-                            <p className="text-xs text-text-secondary">pts</p>
-                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-2 p-3 bg-surface/50 rounded-lg">
+                              <p className="text-sm font-medium text-text-secondary mb-2">Team Players</p>
+                              {loadingScores ? (
+                                <p className="text-text-secondary text-sm">Loading scores...</p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {team.players.map((player) => {
+                                    const isCaptain = player.playerId === team.captainId;
+                                    const isViceCaptain = player.playerId === team.viceCaptainId;
+                                    const playerPoints = playerScores[player.playerId] || 0;
+                                    
+                                    return (
+                                      <div
+                                        key={player.playerId}
+                                        className="flex items-center justify-between p-2 bg-surface rounded"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-1">
+                                            {isCaptain && <Crown size={14} className="text-accent" />}
+                                            {isViceCaptain && <Star size={14} className="text-yellow-400" />}
+                                          </div>
+                                          <div>
+                                            <p className="text-sm text-text-primary">
+                                              {player.name}
+                                            </p>
+                                            <p className="text-xs text-text-secondary capitalize">
+                                              {player.role.replace('-', ' ')}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className={cn(
+                                            "font-bold font-mono",
+                                            isCaptain ? "text-accent" : isViceCaptain ? "text-yellow-400" : "text-text-primary"
+                                          )}>
+                                            {playerPoints}
+                                          </p>
+                                          {isCaptain && (
+                                            <p className="text-xs text-accent">2x</p>
+                                          )}
+                                          {isViceCaptain && (
+                                            <p className="text-xs text-yellow-400">1.5x</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
