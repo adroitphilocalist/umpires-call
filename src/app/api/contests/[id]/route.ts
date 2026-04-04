@@ -1,0 +1,111 @@
+import { NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
+import { Contest } from '@/models/Contest';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await dbConnect();
+    
+    const contest = await Contest.findById(params.id)
+      .populate('matchId')
+      .lean();
+    
+    if (!contest) {
+      return NextResponse.json(
+        { success: false, error: 'Contest not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({
+      success: true,
+      contest: {
+        ...contest,
+        _id: contest._id.toString(),
+        matchId: contest.matchId?._id?.toString(),
+        match: contest.matchId ? {
+          ...contest.matchId,
+          _id: contest.matchId._id.toString(),
+        } : undefined,
+        participantCount: contest.participants?.length || 0,
+        inviteCode: contest.inviteCode,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching contest:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch contest' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await dbConnect();
+    
+    const data = await request.json();
+    
+    const contest = await Contest.findByIdAndUpdate(
+      params.id,
+      { $set: data },
+      { new: true }
+    ).lean();
+    
+    if (!contest) {
+      return NextResponse.json(
+        { success: false, error: 'Contest not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({
+      success: true,
+      contest: {
+        ...contest,
+        _id: contest._id.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('Error updating contest:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update contest' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await dbConnect();
+    
+    const contest = await Contest.findByIdAndDelete(params.id);
+    
+    if (!contest) {
+      return NextResponse.json(
+        { success: false, error: 'Contest not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Contest deleted',
+    });
+  } catch (error) {
+    console.error('Error deleting contest:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete contest' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,86 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+*.pem
+*.key
+*.crt
+secrets.*
+config/local.*
+
+# Dependency directories
+node_modules/
+vendor/
+.pnp/
+.pnp.js
+.next/
+.next/cache/
+# Build / cache outputs
+dist/
+build/
+out/
+coverage/
+.cache/
+.tmp/
+temp/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Java / Kotlin / Gradle
+.gradle/
+*.class
+target/
+
+# .NET
+bin/
+obj/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Test / tooling artifacts
+.junit/
+.nyc_output/
+
+# Archive / backup files
+*.zip
+*.tar
+*.gz
+*.rar
+*.bak
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log

@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #1a472a;
+  --color-primary-light: #2d5a3d;
+  --color-primary-dark: #0f2a1b;
+  --color-accent: #d4af37;
+  --color-accent-light: #e5c556;
+  --color-accent-dark: #b8962e;
+  --color-background: #0a0f0d;
+  --color-surface: #141c16;
+  --color-surface-light: #1e2a22;
+  --color-text-primary: #f5f5dc;
+  --color-text-secondary: #a8b5a0;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent text-background hover:bg-accent-light font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-primary-light text-text-primary hover:bg-primary border border-primary font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+
+  .card {
+    @apply bg-surface border border-primary/30 rounded-xl p-4;
+  }
+
+  .input-field {
+    @apply w-full bg-surface border border-primary rounded-lg px-4 py-2.5 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors;
+  }
+
+  .glass {
+    @apply bg-surface/80 backdrop-blur-md border border-primary/30;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+    }
+    to {
+      box-shadow: 0 0 40px rgba(212, 175, 55, 0.4);
+    }
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-background);
+}
