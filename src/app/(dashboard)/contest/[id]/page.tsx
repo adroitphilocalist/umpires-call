@@ -16,7 +16,7 @@ import {
   PageLoader,
   Input 
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +56,9 @@ export default function ContestDetailPage() {
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [playerScores, setPlayerScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareTeam1, setCompareTeam1] = useState<Team | null>(null);
+  const [compareTeam2, setCompareTeam2] = useState<Team | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -103,6 +106,9 @@ export default function ContestDetailPage() {
       const data = await res.json();
       if (data.success) {
         setTeams(data.teams);
+        if (contest?.matchId && data.teams.length > 0) {
+          await fetchPlayerScores(contest.matchId);
+        }
       }
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -346,10 +352,22 @@ export default function ContestDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy size={20} className="text-accent" />
-                  Leaderboard
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy size={20} className="text-accent" />
+                    Leaderboard
+                  </CardTitle>
+                  {teams.length >= 2 && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setShowCompare(true)}
+                    >
+                      <GitCompare size={14} className="mr-1" />
+                      Compare Teams
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {teams.length === 0 ? (
@@ -540,6 +558,231 @@ export default function ContestDetailPage() {
             </Card>
           </div>
         </div>
+
+        {showCompare && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-card z-10">
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowRightLeft size={20} className="text-accent" />
+                  Team Comparison
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => { setShowCompare(false); setCompareTeam1(null); setCompareTeam2(null); }}>
+                  <X size={20} />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {!compareTeam1 ? (
+                  <div className="space-y-4">
+                    <p className="text-text-secondary text-center mb-4">Select first team to compare</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {teams.map((team) => (
+                        <div
+                          key={team._id}
+                          onClick={() => setCompareTeam1(team)}
+                          className="p-4 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 border border-primary/30 hover:border-accent transition-all"
+                        >
+                          <p className="font-medium text-text-primary">{team.user?.displayName || 'Unknown'}</p>
+                          <p className="text-sm text-text-secondary">{team.score ?? 0} pts</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : !compareTeam2 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 p-3 bg-accent/10 rounded-lg">
+                      <div className="w-3 h-3 rounded-full bg-accent"></div>
+                      <span className="text-text-primary font-medium">{compareTeam1.user?.displayName}</span>
+                      <span className="text-text-secondary">({compareTeam1.score ?? 0} pts)</span>
+                    </div>
+                    <p className="text-text-secondary text-center mb-4">Select second team to compare</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {teams.filter(t => t._id !== compareTeam1._id).map((team) => (
+                        <div
+                          key={team._id}
+                          onClick={() => setCompareTeam2(team)}
+                          className="p-4 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 border border-primary/30 hover:border-accent transition-all"
+                        >
+                          <p className="font-medium text-text-primary">{team.user?.displayName || 'Unknown'}</p>
+                          <p className="text-sm text-text-secondary">{team.score ?? 0} pts</p>
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="ghost" onClick={() => setCompareTeam1(null)} className="w-full">
+                      Go Back
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-4 bg-surface rounded-lg">
+                        <p className="font-bold text-text-primary text-lg">{compareTeam1.user?.displayName}</p>
+                        <p className="text-accent text-2xl font-bold">{compareTeam1.score ?? 0}</p>
+                        <p className="text-text-secondary text-sm">points</p>
+                      </div>
+                      <div className="text-center p-4 bg-surface rounded-lg">
+                        <p className="font-bold text-text-primary text-lg">{compareTeam2.user?.displayName}</p>
+                        <p className="text-accent text-2xl font-bold">{compareTeam2.score ?? 0}</p>
+                        <p className="text-text-secondary text-sm">points</p>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const team1Players = compareTeam1.players.map(p => ({ ...p, points: playerScores[p.playerId] || 0 }));
+                      const team2Players = compareTeam2.players.map(p => ({ ...p, points: playerScores[p.playerId] || 0 }));
+                      
+                      const commonPlayers = team1Players.filter(p1 => team2Players.some(p2 => p2.playerId === p1.playerId));
+                      const onlyInTeam1 = team1Players.filter(p1 => !team2Players.some(p2 => p2.playerId === p1.playerId));
+                      const onlyInTeam2 = team2Players.filter(p2 => !team1Players.some(p1 => p1.playerId === p2.playerId));
+                      
+                      const team1Captain = compareTeam1.players.find(p => p.playerId === compareTeam1.captainId);
+                      const team1ViceCaptain = compareTeam1.players.find(p => p.playerId === compareTeam1.viceCaptainId);
+                      const team2Captain = compareTeam2.players.find(p => p.playerId === compareTeam2.captainId);
+                      const team2ViceCaptain = compareTeam2.players.find(p => p.playerId === compareTeam2.viceCaptainId);
+                      
+                      const getRoleColor = (role: string) => {
+                        switch(role) {
+                          case 'batsman': return 'bg-blue-500/20 text-blue-400';
+                          case 'bowler': return 'bg-red-500/20 text-red-400';
+                          case 'all-rounder': return 'bg-purple-500/20 text-purple-400';
+                          case 'wicket-keeper': return 'bg-green-500/20 text-green-400';
+                          default: return 'bg-gray-500/20 text-gray-400';
+                        }
+                      };
+                      
+                      return (
+                        <>
+                          {commonPlayers.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                Common Players ({commonPlayers.length})
+                              </h4>
+                              <div className="space-y-2">
+                                {commonPlayers.map(player => {
+                                  const p1 = team1Players.find(p => p.playerId === player.playerId);
+                                  const p2 = team2Players.find(p => p.playerId === player.playerId);
+                                  const diff = (p1?.points || 0) - (p2?.points || 0);
+                                  
+                                  return (
+                                    <div key={player.playerId} className="grid grid-cols-5 gap-2 items-center p-2 bg-surface rounded">
+                                      <div className="col-span-2 flex items-center gap-2">
+                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(player.role))}>
+                                          {player.role}
+                                        </span>
+                                        <span className="text-sm text-text-primary truncate">{player.name}</span>
+                                      </div>
+                                      <div className="text-center">
+                                        <span className="text-sm font-bold text-text-primary">{p1?.points || 0}</span>
+                                        {player.playerId === team1Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
+                                        {player.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-yellow-400" />}
+                                      </div>
+                                      <div className="text-center">
+                                        <span className="text-sm font-bold text-text-primary">{p2?.points || 0}</span>
+                                        {player.playerId === team2Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
+                                        {player.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-yellow-400" />}
+                                      </div>
+                                      <div className="text-right">
+                                        <span className={cn("text-sm font-bold", diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-text-secondary")}>
+                                          {diff > 0 ? '+' : ''}{diff}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                Only in {compareTeam1.user?.displayName} ({onlyInTeam1.length})
+                              </h4>
+                              <div className="space-y-2">
+                                {onlyInTeam1.map(player => {
+                                  const isCaptain = player.playerId === compareTeam1.captainId;
+                                  const isViceCaptain = player.playerId === compareTeam1.viceCaptainId;
+                                  return (
+                                    <div key={player.playerId} className="flex items-center justify-between p-2 bg-surface rounded">
+                                      <div className="flex items-center gap-2 overflow-hidden">
+                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(player.role))}>
+                                          {player.role}
+                                        </span>
+                                        <span className="text-sm text-text-primary truncate">{player.name}</span>
+                                        {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
+                                        {isViceCaptain && <Star size={12} className="text-yellow-400 flex-shrink-0" />}
+                                      </div>
+                                      <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                Only in {compareTeam2.user?.displayName} ({onlyInTeam2.length})
+                              </h4>
+                              <div className="space-y-2">
+                                {onlyInTeam2.map(player => {
+                                  const isCaptain = player.playerId === compareTeam2.captainId;
+                                  const isViceCaptain = player.playerId === compareTeam2.viceCaptainId;
+                                  return (
+                                    <div key={player.playerId} className="flex items-center justify-between p-2 bg-surface rounded">
+                                      <div className="flex items-center gap-2 overflow-hidden">
+                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(player.role))}>
+                                          {player.role}
+                                        </span>
+                                        <span className="text-sm text-text-primary truncate">{player.name}</span>
+                                        {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
+                                        {isViceCaptain && <Star size={12} className="text-yellow-400 flex-shrink-0" />}
+                                      </div>
+                                      <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/30">
+                            <div className="text-center p-3 bg-surface rounded-lg">
+                              <p className="text-text-secondary text-sm mb-1">Captain</p>
+                              <p className="font-medium text-text-primary">{team1Captain?.name || '-'}</p>
+                              <p className="text-accent text-sm">{playerScores[team1Captain?.playerId || ''] || 0} pts</p>
+                            </div>
+                            <div className="text-center p-3 bg-surface rounded-lg">
+                              <p className="text-text-secondary text-sm mb-1">Captain</p>
+                              <p className="font-medium text-text-primary">{team2Captain?.name || '-'}</p>
+                              <p className="text-accent text-sm">{playerScores[team2Captain?.playerId || ''] || 0} pts</p>
+                            </div>
+                            <div className="text-center p-3 bg-surface rounded-lg">
+                              <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
+                              <p className="font-medium text-text-primary">{team1ViceCaptain?.name || '-'}</p>
+                              <p className="text-yellow-400 text-sm">{playerScores[team1ViceCaptain?.playerId || ''] || 0} pts</p>
+                            </div>
+                            <div className="text-center p-3 bg-surface rounded-lg">
+                              <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
+                              <p className="font-medium text-text-primary">{team2ViceCaptain?.name || '-'}</p>
+                              <p className="text-yellow-400 text-sm">{playerScores[team2ViceCaptain?.playerId || ''] || 0} pts</p>
+                            </div>
+                          </div>
+
+                          <Button variant="secondary" onClick={() => { setCompareTeam1(null); setCompareTeam2(null); }} className="w-full mt-4">
+                            Compare Different Teams
+                          </Button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );
