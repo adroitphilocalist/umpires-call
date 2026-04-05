@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar, Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, PageLoader } from '@/components/ui';
 import { Match } from '@/types';
-import { Calendar, Edit3, Save, X } from 'lucide-react';
+import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2 } from 'lucide-react';
+
+interface MatchWithScores extends Match {
+  hasScores?: boolean;
+}
 
 export default function AdminMatchesPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<MatchWithScores[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '' });
   const [saving, setSaving] = useState<string | null>(null);
+  const [calculating, setCalculating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -78,6 +83,40 @@ export default function AdminMatchesPage() {
     }
   };
 
+  const calculatePoints = async (match: MatchWithScores) => {
+    if (!match.scorecardUrl) {
+      alert('Please set the scorecard URL first');
+      return;
+    }
+
+    setCalculating(match._id);
+    try {
+      const res = await fetch('/api/scores/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId: match._id,
+          scorecardUrl: match.scorecardUrl,
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setMatches(matches.map(m => 
+          m._id === match._id ? { ...m, hasScores: true } : m
+        ));
+        alert(`Points calculated successfully! ${data.data.playerScores?.length || 0} players updated.`);
+      } else {
+        alert(data.error || 'Failed to calculate points');
+      }
+    } catch (error) {
+      console.error('Error calculating points:', error);
+      alert('Failed to calculate points');
+    } finally {
+      setCalculating(null);
+    }
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'live':
@@ -117,8 +156,9 @@ export default function AdminMatchesPage() {
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Match</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Date</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Status</th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Scorecard URL</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Scorecard URL</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Cricbuzz ID</th>
+                  <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Points</th>
                   <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Actions</th>
                 </tr>
               </thead>
@@ -179,6 +219,38 @@ export default function AdminMatchesPage() {
                           {match.cricbuzzId || '-'}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center">
+                        {match.hasScores ? (
+                          <span className="flex items-center gap-1 text-green-400 text-sm">
+                            <CheckCircle size={14} />
+                            Done
+                          </span>
+                        ) : match.scorecardUrl ? (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => calculatePoints(match)}
+                            disabled={calculating === match._id}
+                            className="text-xs"
+                          >
+                            {calculating === match._id ? (
+                              <>
+                                <Loader2 size={12} className="mr-1 animate-spin" />
+                                Calculating...
+                              </>
+                            ) : (
+                              <>
+                                <Zap size={12} className="mr-1" />
+                                Calculate
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <span className="text-text-secondary text-sm">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
