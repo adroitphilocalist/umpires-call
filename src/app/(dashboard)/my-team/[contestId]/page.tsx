@@ -135,7 +135,7 @@ export default function MyTeamPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {playerList.map(player => {
             const isSelected = selectedPlayers.some(p => p.playerId === player._id);
-            const canSelect = selectedPlayers.length < MAX_PLAYERS && 
+            const canSelect = !isMatchStarted && selectedPlayers.length < MAX_PLAYERS && 
               creditsRemaining >= player.creditValue && 
               !isSelected;
             const isCaptain = captainId === player._id;
@@ -146,13 +146,14 @@ export default function MyTeamPage() {
                 key={player._id}
                 className={cn(
                   'p-3 rounded-lg border transition-all cursor-pointer',
+                  isMatchStarted ? 'bg-surface/50 border-primary/20 opacity-50 cursor-not-allowed' :
                   isSelected 
                     ? 'bg-accent/20 border-accent' 
                     : canSelect 
                       ? 'bg-surface border-primary/30 hover:border-accent' 
                       : 'bg-surface/50 border-primary/20 opacity-50 cursor-not-allowed'
                 )}
-                onClick={() => canSelect || isSelected ? handleSelectPlayer(player) : undefined}
+                onClick={() => isMatchStarted ? undefined : (canSelect || isSelected ? handleSelectPlayer(player) : undefined)}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -207,8 +208,14 @@ export default function MyTeamPage() {
   };
 
   const handleSelectPlayer = (player: Player) => {
+    const isSelected = selectedPlayers.some(p => p.playerId === player._id);
+    
+    if (isSelected) {
+      handleRemovePlayer(player._id);
+      return;
+    }
+
     if (selectedPlayers.length >= MAX_PLAYERS) return;
-    if (selectedPlayers.some(p => p.playerId === player._id)) return;
 
     const totalCredits = selectedPlayers.reduce((sum, p) => sum + p.creditCost, 0);
     if (totalCredits + player.creditValue > MAX_CREDITS) return;
@@ -292,12 +299,61 @@ export default function MyTeamPage() {
     }
   };
 
+  const matchDate = contest?.match?.date ? new Date(contest.match.date) : null;
+  const now = new Date();
+  const isMatchStarted = matchDate && now > matchDate;
+  const canEdit = !isMatchStarted && !existingTeam;
+
   if (authLoading || isLoading) {
     return <PageLoader />;
   }
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (isMatchStarted && existingTeam) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6"
+          >
+            <ArrowLeft size={20} />
+            <span>Back to Contest</span>
+          </button>
+          <Card>
+            <CardHeader>
+              <CardTitle>{teamName}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center p-4 bg-accent/10 rounded-lg border border-accent/30 mb-4">
+                <p className="text-accent font-medium">Match started - team editing locked</p>
+              </div>
+              <div className="space-y-2">
+                {selectedPlayers.map((player) => (
+                  <div key={player.playerId} className="flex items-center justify-between p-3 bg-surface rounded">
+                    <div>
+                      <p className="text-text-primary">{player.name}</p>
+                      <p className="text-xs text-text-secondary">{player.role}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {player.playerId === captainId && <Crown size={16} className="text-accent" />}
+                      {player.playerId === viceCaptainId && <Star size={16} className="text-yellow-400" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={() => router.push(`/contest/${contestId}`)} className="w-full mt-4">
+                Back to Contest
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
   }
 
   const roleCounts = {
@@ -402,7 +458,7 @@ export default function MyTeamPage() {
                   </div>
                 </div>
 
-                {selectedPlayers.length === MAX_PLAYERS && captainId && viceCaptainId && (
+                {selectedPlayers.length === MAX_PLAYERS && captainId && viceCaptainId && !isMatchStarted && (
                   <Button
                     className="w-full"
                     onClick={handleSaveTeam}
@@ -413,12 +469,18 @@ export default function MyTeamPage() {
                   </Button>
                 )}
 
-                {selectedPlayers.length < MAX_PLAYERS && (
+                {isMatchStarted && (
+                  <p className="text-sm text-red-400 text-center">
+                    Match started - team editing locked
+                  </p>
+                )}
+
+                {selectedPlayers.length < MAX_PLAYERS && !isMatchStarted && (
                   <p className="text-sm text-text-secondary text-center">
                     Select {MAX_PLAYERS - selectedPlayers.length} more players
                   </p>
                 )}
-                {selectedPlayers.length === MAX_PLAYERS && (!captainId || !viceCaptainId) && (
+                {selectedPlayers.length === MAX_PLAYERS && (!captainId || !viceCaptainId) && !isMatchStarted && (
                   <p className="text-sm text-text-secondary text-center text-yellow-400">
                     Select captain and vice-captain
                   </p>

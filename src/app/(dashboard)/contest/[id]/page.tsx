@@ -614,18 +614,50 @@ export default function ContestDetailPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-surface rounded-lg">
-                        <p className="font-bold text-text-primary text-lg">{compareTeam1.user?.displayName}</p>
-                        <p className="text-accent text-2xl font-bold">{compareTeam1.score ?? 0}</p>
-                        <p className="text-text-secondary text-sm">points</p>
-                      </div>
-                      <div className="text-center p-4 bg-surface rounded-lg">
-                        <p className="font-bold text-text-primary text-lg">{compareTeam2.user?.displayName}</p>
-                        <p className="text-accent text-2xl font-bold">{compareTeam2.score ?? 0}</p>
-                        <p className="text-text-secondary text-sm">points</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const team1Score = compareTeam1.score ?? 0;
+                      const team2Score = compareTeam2.score ?? 0;
+                      const overallDiff = team1Score - team2Score;
+                      const leader = overallDiff > 0 ? compareTeam1.user?.displayName : overallDiff < 0 ? compareTeam2.user?.displayName : null;
+                      
+                      return (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className={cn("text-center p-4 rounded-lg border-2", overallDiff > 0 ? "border-accent bg-accent/10" : overallDiff === 0 ? "bg-surface" : "bg-surface")}>
+                              <p className="font-bold text-text-primary text-lg">{compareTeam1.user?.displayName}</p>
+                              <p className="text-accent text-3xl font-bold">{team1Score}</p>
+                              <p className="text-text-secondary text-sm">points</p>
+                            </div>
+                            <div className={cn("text-center p-4 rounded-lg border-2", overallDiff < 0 ? "border-accent bg-accent/10" : overallDiff === 0 ? "bg-surface" : "bg-surface")}>
+                              <p className="font-bold text-text-primary text-lg">{compareTeam2.user?.displayName}</p>
+                              <p className="text-accent text-3xl font-bold">{team2Score}</p>
+                              <p className="text-text-secondary text-sm">points</p>
+                            </div>
+                          </div>
+                          
+                          {leader ? (
+                            <div className="text-center p-3 bg-accent/10 rounded-lg border border-accent/30">
+                              <p className="text-text-primary font-medium">
+                                🏆 <span className="text-accent font-bold">{leader}</span> leads by <span className="text-accent font-bold text-2xl">{Math.abs(overallDiff)} pts</span>
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="text-center p-3 bg-surface rounded-lg border border-yellow-500/30">
+                              <p className="text-yellow-400 font-medium">⚖️ Equal points!</p>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-center gap-8 p-2 bg-surface rounded-lg">
+                            <div className="text-center">
+                              <p className="text-xs text-text-secondary">Difference</p>
+                              <p className={cn("text-lg font-bold", overallDiff > 0 ? "text-green-400" : overallDiff < 0 ? "text-red-400" : "text-text-secondary")}>
+                                {overallDiff > 0 ? '+' : ''}{overallDiff}
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {(() => {
                       const team1Players = compareTeam1.players.map(p => ({ ...p, points: playerScores[p.playerId] || 0 }));
