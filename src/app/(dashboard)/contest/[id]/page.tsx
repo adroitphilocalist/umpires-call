@@ -4,21 +4,39 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Navbar, 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent, 
-  Button, 
-  Badge, 
+import {
+  Navbar,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+  Badge,
   PageLoader,
-  Input 
+  Input
 } from '@/components/ui';
 import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
+
+interface PlayerBreakdown {
+  category: string;
+  description: string;
+  points: number;
+}
+
+interface TeamPlayer {
+  playerId: string;
+  name: string;
+  role: string;
+  creditCost: number;
+  points?: number;
+  multiplier?: number;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  breakdown?: PlayerBreakdown[];
+}
 
 interface Team {
   _id: string;
@@ -29,12 +47,7 @@ interface Team {
   rank?: number;
   captainId: string;
   viceCaptainId: string;
-  players: Array<{
-    playerId: string;
-    name: string;
-    role: string;
-    creditCost: number;
-  }>;
+  players: TeamPlayer[];
   user?: {
     _id: string;
     displayName: string;
@@ -54,18 +67,16 @@ export default function ContestDetailPage() {
   const [isJoining, setIsJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+  const [expandedPlayerId, setExpandedPlayerId] = useState<{ teamId: string; playerId: string } | null>(null);
   const [playerScores, setPlayerScores] = useState<Record<string, number>>({});
   const [loadingScores, setLoadingScores] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [compareTeam1, setCompareTeam1] = useState<Team | null>(null);
   const [compareTeam2, setCompareTeam2] = useState<Team | null>(null);
   const [lastScoreUpdate, setLastScoreUpdate] = useState<Date | null>(null);
+  const [isFromCache, setIsFromCache] = useState(false);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [authLoading, isAuthenticated, router]);
+
 
   useEffect(() => {
     if (user && contestId) {
@@ -103,11 +114,21 @@ export default function ContestDetailPage() {
 
   const fetchAllTeams = async () => {
     try {
-      const res = await fetch(`/api/teams?contestId=${contestId}`);
+      // Fetch from scores API which now handles completed vs live matches
+      const res = await fetch(`/api/scores?contestId=${contestId}`);
       const data = await res.json();
-      if (data.success) {
-        setTeams(data.teams);
-        if (contest?.matchId && data.teams.length > 0) {
+
+      if (data.success && data.leaderboard) {
+        setTeams(data.leaderboard);
+        setIsFromCache(data.isFromCache || false);
+
+        if (data.lastScoreUpdate) {
+          setLastScoreUpdate(new Date(data.lastScoreUpdate));
+        }
+
+        // If from cache (completed match), players already have breakdown
+        // If not from cache, we need to fetch player scores separately
+        if (!data.isFromCache && contest?.matchId && data.leaderboard.length > 0) {
           await fetchPlayerScores(contest.matchId);
         }
       }
@@ -146,9 +167,11 @@ export default function ContestDetailPage() {
   const toggleTeamExpand = async (team: Team) => {
     if (expandedTeamId === team._id) {
       setExpandedTeamId(null);
+      setExpandedPlayerId(null);
     } else {
       setExpandedTeamId(team._id);
-      if (contest?.matchId && Object.keys(playerScores).length === 0) {
+      setExpandedPlayerId(null);
+      if (contest?.matchId && Object.keys(playerScores).length === 0 && !isFromCache) {
         await fetchPlayerScores(contest.matchId);
       }
     }
@@ -376,14 +399,23 @@ export default function ContestDetailPage() {
                 </div>
                 {lastScoreUpdate && (
                   <div className="flex items-center gap-2 mt-2 text-xs text-text-secondary">
-                    <Clock size={12} />
-                    <span>Scores updated: {lastScoreUpdate.toLocaleString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true
-                    })}</span>
+                    {isFromCache ? (
+                      <>
+                        <Trophy size={12} className="text-green-400" />
+                        <span className="text-green-400">Final Results • Match Completed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={12} />
+                        <span>Scores updated: {lastScoreUpdate.toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}</span>
+                      </>
+                    )}
                   </div>
                 )}
               </CardHeader>
@@ -440,43 +472,97 @@ export default function ContestDetailPage() {
                               ) : (
                                 <div className="space-y-1">
                                   {team.players.map((player) => {
-                                    const isCaptain = player.playerId === team.captainId;
-                                    const isViceCaptain = player.playerId === team.viceCaptainId;
-                                    const playerPoints = playerScores[player.playerId] || 0;
-                                    
+                                    const isCaptain = player.isCaptain || player.playerId === team.captainId;
+                                    const isViceCaptain = player.isViceCaptain || player.playerId === team.viceCaptainId;
+                                    const playerPoints = player.points || playerScores[player.playerId] || 0;
+                                    const isPlayerExpanded = expandedPlayerId?.teamId === team._id && expandedPlayerId?.playerId === player.playerId;
+
+                                    const getCategoryColor = (category: string) => {
+                                      switch (category) {
+                                        case 'Batting': return 'bg-blue-500/20 text-blue-400';
+                                        case 'Bowling': return 'bg-red-500/20 text-red-400';
+                                        case 'Fielding': return 'bg-green-500/20 text-green-400';
+                                        case 'Milestone': return 'bg-yellow-500/20 text-yellow-400';
+                                        case 'Strike Rate': return 'bg-purple-500/20 text-purple-400';
+                                        case 'Economy': return 'bg-orange-500/20 text-orange-400';
+                                        case 'Other': return 'bg-gray-500/20 text-gray-400';
+                                        case 'Multiplier': return 'bg-amber-500/20 text-amber-400';
+                                        default: return 'bg-gray-500/20 text-gray-400';
+                                      }
+                                    };
+
                                     return (
-                                      <div
-                                        key={player.playerId}
-                                        className="flex items-center justify-between p-2 bg-surface rounded"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <div className="flex items-center gap-1">
-                                            {isCaptain && <Crown size={14} className="text-accent" />}
-                                            {isViceCaptain && <Star size={14} className="text-yellow-400" />}
+                                      <div key={player.playerId}>
+                                        <div
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (player.breakdown && player.breakdown.length > 0) {
+                                              setExpandedPlayerId(isPlayerExpanded ? null : { teamId: team._id, playerId: player.playerId });
+                                            }
+                                          }}
+                                          className={cn(
+                                            "flex items-center justify-between p-2 bg-surface rounded cursor-pointer transition-colors",
+                                            player.breakdown && player.breakdown.length > 0 && "hover:bg-surface-light cursor-pointer"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                              {isCaptain && <Crown size={14} className="text-accent" />}
+                                              {isViceCaptain && <Star size={14} className="text-yellow-400" />}
+                                            </div>
+                                            <div>
+                                              <p className="text-sm text-text-primary">
+                                                {player.name}
+                                              </p>
+                                              <p className="text-xs text-text-secondary capitalize">
+                                                {player.role.replace('-', ' ')}
+                                              </p>
+                                            </div>
                                           </div>
-                                          <div>
-                                            <p className="text-sm text-text-primary">
-                                              {player.name}
-                                            </p>
-                                            <p className="text-xs text-text-secondary capitalize">
-                                              {player.role.replace('-', ' ')}
-                                            </p>
+                                          <div className="flex items-center gap-2">
+                                            {player.breakdown && player.breakdown.length > 0 && (
+                                              <span className="text-xs text-text-secondary">
+                                                {isPlayerExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                              </span>
+                                            )}
+                                            <div className="text-right">
+                                              <p className={cn(
+                                                "font-bold font-mono",
+                                                isCaptain ? "text-accent" : isViceCaptain ? "text-yellow-400" : "text-text-primary"
+                                              )}>
+                                                {playerPoints}
+                                              </p>
+                                              {isCaptain && (
+                                                <p className="text-xs text-accent">2x</p>
+                                              )}
+                                              {isViceCaptain && (
+                                                <p className="text-xs text-yellow-400">1.5x</p>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
-                                        <div className="text-right">
-                                          <p className={cn(
-                                            "font-bold font-mono",
-                                            isCaptain ? "text-accent" : isViceCaptain ? "text-yellow-400" : "text-text-primary"
-                                          )}>
-                                            {playerPoints}
-                                          </p>
-                                          {isCaptain && (
-                                            <p className="text-xs text-accent">2x</p>
-                                          )}
-                                          {isViceCaptain && (
-                                            <p className="text-xs text-yellow-400">1.5x</p>
-                                          )}
-                                        </div>
+
+                                        {/* Player Breakdown */}
+                                        {isPlayerExpanded && player.breakdown && player.breakdown.length > 0 && (
+                                          <div className="ml-4 mt-1 p-2 bg-background rounded border border-primary/20 mb-2">
+                                            <p className="text-xs font-semibold text-text-secondary mb-2">Points Breakdown</p>
+                                            <div className="space-y-1">
+                                              {player.breakdown.map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between text-xs">
+                                                  <div className="flex items-center gap-2">
+                                                    <Badge className={getCategoryColor(item.category)} variant="default">
+                                                      {item.category}
+                                                    </Badge>
+                                                    <span className="text-text-primary text-xs">{item.description}</span>
+                                                  </div>
+                                                  <span className={item.points >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                                    {item.points >= 0 ? '+' : ''}{item.points}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}

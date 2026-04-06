@@ -183,7 +183,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
                     <span>4 Wicket Bonus</span>
                     <span className="font-bold">+8</span>
                   </div>
-                  <div className="flex justify-between text-red-800 font-bold text-green-700">
+                  <div className="flex justify-between text-green-700 font-bold">
                     <span>5 Wicket Haul</span>
                     <span className="font-bold">+12</span>
                   </div>

@@ -2,6 +2,37 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Match } from '@/models/Match';
 
+// Helper function to determine match status based on time
+// If match started >= 5 hours ago → completed
+// If match started < 5 hours ago but has started → live
+// If match hasn't started yet → upcoming
+function getMatchStatus(matchDate: Date, dbStatus?: string): 'completed' | 'live' | 'upcoming' {
+  const now = new Date();
+  const matchTime = new Date(matchDate);
+
+  // If explicitly set to completed in DB, always completed
+  if (dbStatus === 'completed') {
+    return 'completed';
+  }
+
+  // Calculate time difference in hours
+  const timeDiffMs = now.getTime() - matchTime.getTime();
+  const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+
+  // If match started 5 or more hours ago → completed
+  if (timeDiffHours >= 5) {
+    return 'completed';
+  }
+
+  // If match has started but less than 5 hours ago → live
+  if (timeDiffHours >= 0) {
+    return 'live';
+  }
+
+  // If match hasn't started yet → upcoming
+  return 'upcoming';
+}
+
 export async function GET(request: Request) {
   try {
     await dbConnect();
@@ -18,29 +49,9 @@ export async function GET(request: Request) {
       .limit(100)
       .lean();
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
     const matchesWithComputedStatus = matches.map((m) => {
-      // If DB status is explicitly 'completed', always show as completed
-      if (m.status === 'completed') {
-        return { ...m, status: 'completed' as const };
-      }
-
-      // If DB status is 'live', check if match date has passed
-      // If match date is in the past, auto-complete it
-      const matchDate = new Date(m.date);
-      if (m.status === 'live' && matchDate < startOfToday) {
-        return { ...m, status: 'completed' as const };
-      }
-
-      // If match date is in the past and not 'live', it's completed
-      if (matchDate < startOfToday) {
-        return { ...m, status: 'completed' as const };
-      }
-
-      // Otherwise it's upcoming
-      return { ...m, status: 'upcoming' as const };
+      const computedStatus = getMatchStatus(m.date, m.status);
+      return { ...m, status: computedStatus };
     });
 
     const filteredMatches = status

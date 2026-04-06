@@ -367,29 +367,62 @@ export async function POST(request: Request) {
           existing.stats.substitute = 1;
         }
 
-        // Track fielding contributions (catches)
-        if (batsman.fielderId1) {
+        // Track fielding contributions
+        const wicketCodeUpper = wicketCode?.toUpperCase() || '';
+        const isRunOut = wicketCodeUpper.includes('RUNOUT') || wicketCodeUpper === 'RUN OUT';
+        const isCatch = wicketCodeUpper.includes('CAUGHT') || wicketCodeUpper.includes('C ');
+
+        if (isRunOut) {
+          // For run-outs: Both fielderId1 and fielderId2 are involved
+          // Check if it's a direct hit (only one fielder involved)
+          const isDirectHit = !batsman.fielderId2 || batsman.fielderId2 === 0;
+
+          if (batsman.fielderId1) {
+            const fielderId = String(batsman.fielderId1);
+            if (!fieldingMap.has(fielderId)) {
+              fieldingMap.set(fielderId, { catches: 0, stumpings: 0, runOutsDirect: 0, runOutsIndirect: 0 });
+            }
+            if (isDirectHit) {
+              fieldingMap.get(fielderId)!.runOutsDirect += 1;
+            } else {
+              fieldingMap.get(fielderId)!.runOutsIndirect += 1;
+            }
+          }
+
+          if (batsman.fielderId2) {
+            const fielderId = String(batsman.fielderId2);
+            if (!fieldingMap.has(fielderId)) {
+              fieldingMap.set(fielderId, { catches: 0, stumpings: 0, runOutsDirect: 0, runOutsIndirect: 0 });
+            }
+            // fielderId2 is always involved in run-outs when present
+            // If fielderId3 exists, it's not a direct hit
+            const isStillDirectHit = isDirectHit && !batsman.fielderId3;
+            if (isStillDirectHit) {
+              fieldingMap.get(fielderId)!.runOutsDirect += 1;
+            } else {
+              fieldingMap.get(fielderId)!.runOutsIndirect += 1;
+            }
+          }
+        } else if (isCatch) {
+          // For catches: fielderId1 is the catcher
+          if (batsman.fielderId1) {
+            const fielderId = String(batsman.fielderId1);
+            if (!fieldingMap.has(fielderId)) {
+              fieldingMap.set(fielderId, { catches: 0, stumpings: 0, runOutsDirect: 0, runOutsIndirect: 0 });
+            }
+            fieldingMap.get(fielderId)!.catches += 1;
+          }
+        } else if (batsman.fielderId1 && !isRunOut) {
+          // For other dismissals like stumping, fielderId1 might be involved
           const fielderId = String(batsman.fielderId1);
           if (!fieldingMap.has(fielderId)) {
             fieldingMap.set(fielderId, { catches: 0, stumpings: 0, runOutsDirect: 0, runOutsIndirect: 0 });
           }
-          // fielderId1 is typically the catcher for catches
-          fieldingMap.get(fielderId)!.catches += 1;
-        }
-
-        // fielderId2 and fielderId3 are for run outs
-        if (batsman.fielderId2) {
-          const fielderId = String(batsman.fielderId2);
-          if (!fieldingMap.has(fielderId)) {
-            fieldingMap.set(fielderId, { catches: 0, stumpings: 0, runOutsDirect: 0, runOutsIndirect: 0 });
-          }
-          // fielderId2 is typically involved in run outs
-          // Check if it's a direct hit (only fielderId1 touched, or fielderId1 is the same as fielderId2)
-          const isDirectHit = !batsman.fielderId3 || (batsman.fielderId3 === 0);
-          if (isDirectHit) {
-            fieldingMap.get(fielderId)!.runOutsDirect += 1;
+          // Check if it's a stumping (wicket-keeper)
+          if (wicketCodeUpper.includes('STUMPED') || wicketCodeUpper === 'STUMPING') {
+            fieldingMap.get(fielderId)!.stumpings += 1;
           } else {
-            fieldingMap.get(fielderId)!.runOutsIndirect += 1;
+            fieldingMap.get(fielderId)!.catches += 1;
           }
         }
 
