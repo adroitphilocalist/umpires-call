@@ -136,7 +136,6 @@ export default function MyTeamPage() {
           {playerList.map(player => {
             const isSelected = selectedPlayers.some(p => p.playerId === player._id);
             const canSelect = !isMatchStarted && selectedPlayers.length < MAX_PLAYERS && 
-              creditsRemaining >= player.creditValue && 
               !isSelected;
             const isCaptain = captainId === player._id;
             const isViceCaptain = viceCaptainId === player._id;
@@ -217,9 +216,6 @@ export default function MyTeamPage() {
 
     if (selectedPlayers.length >= MAX_PLAYERS) return;
 
-    const totalCredits = selectedPlayers.reduce((sum, p) => sum + p.creditCost, 0);
-    if (totalCredits + player.creditValue > MAX_CREDITS) return;
-
     setSelectedPlayers([...selectedPlayers, {
       playerId: player._id,
       name: player.name,
@@ -258,6 +254,19 @@ export default function MyTeamPage() {
       alert('You must select exactly 11 players');
       return;
     }
+
+    const roleCounts = {
+      batsman: selectedPlayers.filter(p => p.role === 'batsman').length,
+      bowler: selectedPlayers.filter(p => p.role === 'bowler').length,
+      'all-rounder': selectedPlayers.filter(p => p.role === 'all-rounder').length,
+      'wicket-keeper': selectedPlayers.filter(p => p.role === 'wicket-keeper').length,
+    };
+
+    if (roleCounts.batsman < 1 || roleCounts.bowler < 1 || roleCounts['all-rounder'] < 1 || roleCounts['wicket-keeper'] < 1) {
+      alert('You must select at least 1 batsman, 1 wicket keeper, 1 bowler, and 1 all-rounder');
+      return;
+    }
+
     if (!captainId || !viceCaptainId) {
       alert('Please select both captain and vice-captain');
       return;
@@ -381,11 +390,7 @@ export default function MyTeamPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-text-primary font-heading">Build Your Team</h1>
-                <p className="text-text-secondary">Select 11 players within 100 credits</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-accent">{creditsRemaining}</p>
-                <p className="text-sm text-text-secondary">credits left</p>
+                <p className="text-text-secondary">Select 11 players with required roles</p>
               </div>
             </div>
 
@@ -453,8 +458,14 @@ export default function MyTeamPage() {
 
                 <div className="border-t border-primary/30 pt-4 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-text-secondary">Total Credits Used</span>
-                    <span className="font-bold text-text-primary">{totalCredits}/{MAX_CREDITS}</span>
+                    <span className="text-text-secondary">Role Requirements</span>
+                    <span className={cn(
+                      "font-bold",
+                      roleCounts.batsman >= 1 && roleCounts.bowler >= 1 && roleCounts['all-rounder'] >= 1 && roleCounts['wicket-keeper'] >= 1
+                        ? "text-green-400" : "text-yellow-400"
+                    )}>
+                      {roleCounts.batsman >= 1 && roleCounts.bowler >= 1 && roleCounts['all-rounder'] >= 1 && roleCounts['wicket-keeper'] >= 1 ? "Met" : "Not Met"}
+                    </span>
                   </div>
                 </div>
 
