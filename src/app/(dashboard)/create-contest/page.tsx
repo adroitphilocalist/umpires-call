@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar, Card, CardHeader, CardTitle, CardContent, Button, Badge, PageLoader } from '@/components/ui';
 import { Match } from '@/types';
-import { Trophy, Users } from 'lucide-react';
+import { Trophy, Users, Calendar, Clock, MapPin } from 'lucide-react';
 
 export default function CreateContestPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -32,7 +32,7 @@ export default function CreateContestPage() {
       const res = await fetch('/api/matches?status=upcoming');
       const data = await res.json();
       if (data.success) {
-        setMatches(data.matches);
+        setMatches((data.matches || []).slice(0, 3));
       }
     } catch (error) {
       console.error('Error fetching matches:', error);
@@ -123,21 +123,75 @@ export default function CreateContestPage() {
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Choose an upcoming match
+                  Choose one of the next 3 matches
                 </label>
-                <select
-                  className="w-full bg-surface border border-primary rounded-lg px-4 py-3 text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-                  value={selectedMatchId}
-                  onChange={(e) => setSelectedMatchId(e.target.value)}
-                  required
-                >
-                  <option value="">Select a match</option>
-                  {matches.map((match) => (
-                    <option key={match._id} value={match._id}>
-                      {match.team1.shortName} vs {match.team2.shortName} - {new Date(match.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} at {match.venue.split(',')[0]}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-3">
+                  {matches.length === 0 ? (
+                    <div className="rounded-lg border border-primary/40 bg-surface-light p-4 text-sm text-text-secondary">
+                      No upcoming matches available right now.
+                    </div>
+                  ) : (
+                    matches.map((match, index) => {
+                      const isSelected = selectedMatchId === match._id;
+
+                      return (
+                        <button
+                          key={match._id}
+                          type="button"
+                          onClick={() => setSelectedMatchId(match._id)}
+                          className={`w-full rounded-xl border p-4 text-left transition-all ${
+                            isSelected
+                              ? 'border-accent bg-accent/10 ring-1 ring-accent'
+                              : 'border-primary/40 bg-surface-light hover:border-accent/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-base font-semibold text-text-primary">
+                                {match.team1.shortName} vs {match.team2.shortName}
+                              </p>
+                              <p className="text-xs text-text-secondary mt-1">
+                                {match.team1.name} vs {match.team2.name}
+                              </p>
+                            </div>
+                            <Badge variant={isSelected ? 'info' : 'default'}>
+                              Match {match.matchNumber ?? index + 1}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-text-secondary">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={14} className="text-accent" />
+                              <span>
+                                {new Date(match.date).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                  timeZone: 'UTC',
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={14} className="text-accent" />
+                              <span>
+                                {new Date(match.date).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                  timeZone: 'UTC',
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <MapPin size={14} className="text-accent" />
+                              <span className="truncate">{match.venue.split(',')[0]}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               {selectedMatchId && (

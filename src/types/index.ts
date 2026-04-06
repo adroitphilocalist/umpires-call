@@ -59,6 +59,7 @@ export interface Match {
   team2: TeamInfo;
   venue: string;
   date: Date;
+  matchNumber?: number;
   status: MatchStatus;
   format: MatchFormat;
   createdAt: Date;
