@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
-import { MatchScore } from '@/models/MatchScore';
-import { Team } from '@/models/Team';
+import { MatchScore, IMatchScore } from '@/models/MatchScore';
+import { Team, ITeam } from '@/models/Team';
 import { User } from '@/models/User';
+import { Player, IPlayer } from '@/models/Player';
+import { Match } from '@/models/Match';
+
+interface PopulatedMatchScore extends Omit<IMatchScore, 'playerId' | 'matchId'> {
+  _id: mongoose.Types.ObjectId;
+  matchId: mongoose.Types.ObjectId;
+  playerId: IPlayer | null;
+}
+
+interface PopulatedMatch extends mongoose.Document {
+  lastScoreUpdate?: Date;
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,13 +34,17 @@ export async function GET(request: Request) {
 
     if (matchId) {
       const scores = await MatchScore.find({ matchId })
-        .populate('playerId')
+        .populate({ path: 'playerId', model: Player })
         .sort({ points: -1 })
-        .lean();
+        .lean<PopulatedMatchScore[]>();
+
+      // Get match to retrieve lastScoreUpdate
+      const match = await Match.findById(matchId).lean<PopulatedMatch>();
 
       return NextResponse.json({
         success: true,
         matchId,
+        lastScoreUpdate: match?.lastScoreUpdate || null,
         scores: scores.map((score) => ({
           _id: score._id.toString(),
           matchId: score.matchId.toString(),
@@ -37,22 +54,22 @@ export async function GET(request: Request) {
           stats: score.stats,
           lastUpdated: score.lastUpdated,
           player: score.playerId ? {
-            _id: (score.playerId as any)._id.toString(),
-            name: (score.playerId as any).name,
-            role: (score.playerId as any).role,
-            team: (score.playerId as any).team,
-            creditValue: (score.playerId as any).creditValue,
-            image: (score.playerId as any).image,
+            _id: score.playerId._id.toString(),
+            name: score.playerId.name,
+            role: score.playerId.role,
+            team: score.playerId.team,
+            creditValue: score.playerId.creditValue,
+            image: score.playerId.image,
           } : undefined,
         })),
       });
     }
 
     if (contestId) {
-      const teams = await Team.find({ contestId })
-        .populate('userId', 'displayName username avatar')
+      const teams = await Team.find<ITeam>({ contestId })
+        .populate({ path: 'userId', model: User, select: 'displayName username avatar' })
         .sort({ score: -1 })
-        .lean();
+        .lean<ITeam[]>();
 
       const leaderboard = teams.map((team, index) => ({
         _id: team._id.toString(),

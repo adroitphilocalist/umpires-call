@@ -21,6 +21,9 @@ export interface IMatch extends Document {
     currentInning: number;
     battingTeam: string;
   };
+  apiCallCount: number;
+  lastApiCall?: Date;
+  lastScoreUpdate?: Date;
   createdAt: Date;
 }
 
@@ -54,6 +57,9 @@ const MatchSchema = new Schema<IMatch>(
       currentInning: Number,
       battingTeam: String,
     },
+    apiCallCount: { type: Number, default: 0 },
+    lastApiCall: { type: Date },
+    lastScoreUpdate: { type: Date },
   },
   { timestamps: true }
 );

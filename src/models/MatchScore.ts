@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IMatchScoreStats {
   runs: number;
   balls: number;
+  dots: number;
   fours: number;
   sixes: number;
   strikeRate: number;
@@ -12,6 +13,10 @@ export interface IMatchScoreStats {
   economy: number;
   catches: number;
   runOuts: number;
+  stumpings: number;
+  lbwBowled: number; // LBW or Bowled dismissals for bonus
+  playingXI: number; // 1 if in playing XI, 0 otherwise
+  substitute: number; // 1 if concussion/X-Factor/Impact sub
 }
 
 export interface IMatchScore extends Document {
@@ -27,6 +32,7 @@ const MatchScoreStatsSchema = new Schema<IMatchScoreStats>(
   {
     runs: { type: Number, default: 0 },
     balls: { type: Number, default: 0 },
+    dots: { type: Number, default: 0 },
     fours: { type: Number, default: 0 },
     sixes: { type: Number, default: 0 },
     strikeRate: { type: Number, default: 0 },
@@ -36,6 +42,10 @@ const MatchScoreStatsSchema = new Schema<IMatchScoreStats>(
     economy: { type: Number, default: 0 },
     catches: { type: Number, default: 0 },
     runOuts: { type: Number, default: 0 },
+    stumpings: { type: Number, default: 0 },
+    lbwBowled: { type: Number, default: 0 },
+    playingXI: { type: Number, default: 0 },
+    substitute: { type: Number, default: 0 },
   },
   { _id: false }
 );

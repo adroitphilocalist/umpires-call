@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { Phone, Trophy } from 'lucide-react';
 
 function LoginFormContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +22,12 @@ function LoginFormContent() {
     }
   }, [searchParams]);
 
-  // Format phone number - only allow 10 digits
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.location.href = '/dashboard';
+    }
+  }, [isAuthenticated]);
+
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
     return digits.slice(0, 10);
@@ -48,17 +52,23 @@ function LoginFormContent() {
 
       const formattedPhone = `+91${phone}`;
       
-      // Check if user exists and login directly
-      const response = await fetch(`/api/users?phone=${encodeURIComponent(formattedPhone)}`);
+      const response = await fetch(`/api/auth/login?phone=${encodeURIComponent(formattedPhone)}`);
       const data = await response.json();
+      console.log('Login response:', data);
       
-      if (data.success && data.user) {
-        // Login successful
-        login(data.user);
-        router.push('/dashboard');
+      if (data.success && data.token) {
+        await login(data.user, data.token);
+        console.log('Login successful, token received:', data.token);
+        setIsLoading(false);
+        window.location.href = '/dashboard';
+        return;
+      } else if (data.error === 'User not found') {
+        setIsLoading(false);
+        window.location.href = `/register?phone=${encodeURIComponent(formattedPhone)}`;
+        return;
       } else {
-        // User doesn't exist - redirect to register
-        router.push(`/register?phone=${encodeURIComponent(formattedPhone)}`);
+        setError(data.error || 'Login failed. Please try again.');
+        setIsLoading(false);
       }
     } catch (err: any) {
       console.error('Error logging in:', err);

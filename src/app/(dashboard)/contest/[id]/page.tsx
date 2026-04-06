@@ -16,7 +16,7 @@ import {
   PageLoader,
   Input 
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +59,7 @@ export default function ContestDetailPage() {
   const [showCompare, setShowCompare] = useState(false);
   const [compareTeam1, setCompareTeam1] = useState<Team | null>(null);
   const [compareTeam2, setCompareTeam2] = useState<Team | null>(null);
+  const [lastScoreUpdate, setLastScoreUpdate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -117,18 +118,23 @@ export default function ContestDetailPage() {
 
   const fetchPlayerScores = async (matchId: string) => {
     if (!matchId) return;
-    
+
     setLoadingScores(true);
     try {
       const res = await fetch(`/api/scores?matchId=${matchId}`);
       const data = await res.json();
-      
+
       if (data.success && data.scores) {
         const scoresMap: Record<string, number> = {};
         data.scores.forEach((score: any) => {
           scoresMap[score.playerId] = score.points;
         });
         setPlayerScores(scoresMap);
+
+        // Set last score update time if available
+        if (data.lastScoreUpdate) {
+          setLastScoreUpdate(new Date(data.lastScoreUpdate));
+        }
       }
     } catch (error) {
       console.error('Error fetching player scores:', error);
@@ -368,6 +374,18 @@ export default function ContestDetailPage() {
                     </Button>
                   )}
                 </div>
+                {lastScoreUpdate && (
+                  <div className="flex items-center gap-2 mt-2 text-xs text-text-secondary">
+                    <Clock size={12} />
+                    <span>Scores updated: {lastScoreUpdate.toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}</span>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {teams.length === 0 ? (

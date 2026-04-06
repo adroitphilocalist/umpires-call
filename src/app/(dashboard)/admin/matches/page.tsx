@@ -159,6 +159,7 @@ export default function AdminMatchesPage() {
                     <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Scorecard URL</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Cricbuzz ID</th>
                   <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Points</th>
+                  <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">API Calls</th>
                   <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Actions</th>
                 </tr>
               </thead>
@@ -219,6 +220,11 @@ export default function AdminMatchesPage() {
                           {match.cricbuzzId || '-'}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center">
+                        {(match as any).apiCallCount || 0}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">

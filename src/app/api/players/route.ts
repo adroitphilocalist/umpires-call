@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { Player } from '@/models/Player';
+
+interface LeanPlayer {
+  _id: { toString(): string };
+  name: string;
+  role: string;
+  team: string;
+  creditValue: number;
+  image?: string;
+  externalId?: string;
+  stats: Record<string, number | undefined>;
+}
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +26,8 @@ export async function GET(request: Request) {
     if (role) query.role = role;
     if (team) query.team = team;
     
-    const players = await Player.find(query).lean();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const players = await Player.find(query).lean() as any as LeanPlayer[];
     
     return NextResponse.json({
       success: true,

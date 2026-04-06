@@ -3,6 +3,13 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { Team } from '@/models/Team';
 import { Contest } from '@/models/Contest';
+interface LeanUser {
+  _id: { toString(): string };
+  name?: string;
+  email?: string;
+  phone?: string;
+  [key: string]: unknown;
+}
 
 export async function GET(
   request: Request,
@@ -11,12 +18,7 @@ export async function GET(
   try {
     await dbConnect();
     
-    // Try to find by _id or phone
-    let user = await User.findById(params.uid).lean();
-    
-    if (!user) {
-      user = await User.findOne({ phone: params.uid }).lean();
-    }
+    const user = await User.findById(params.uid).lean();
     
     if (!user) {
       return NextResponse.json(
@@ -25,11 +27,13 @@ export async function GET(
       );
     }
     
+    const leanUser = user as unknown as LeanUser;
+    
     return NextResponse.json({
       success: true,
       user: {
         ...user,
-        _id: user._id.toString(),
+        _id: leanUser._id.toString(),
       },
     });
   } catch (error) {
@@ -67,11 +71,7 @@ async function handleStats(uid: string) {
   try {
     await dbConnect();
     
-    let user = await User.findById(uid).lean();
-    if (!user) {
-      user = await User.findOne({ phone: uid }).lean();
-    }
-    
+    const user = await User.findById(uid).lean();
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -79,7 +79,9 @@ async function handleStats(uid: string) {
       );
     }
     
-    const teams = await Team.find({ userId: user._id.toString() }).lean();
+    const leanUser = user as unknown as LeanUser;
+    const userId = leanUser._id.toString();
+    const teams = await Team.find({ userId }).lean();
     const contestsWon = teams.filter(t => t.rank === 1).length;
     const avgRank = teams.length > 0
       ? Math.round(teams.reduce((sum, t) => sum + (t.rank || 999), 0) / teams.length)
@@ -107,11 +109,7 @@ async function handleHistory(uid: string) {
   try {
     await dbConnect();
     
-    let user = await User.findById(uid).lean();
-    if (!user) {
-      user = await User.findOne({ phone: uid }).lean();
-    }
-    
+    const user = await User.findById(uid).lean();
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -119,13 +117,15 @@ async function handleHistory(uid: string) {
       );
     }
     
-    const teams = await Team.find({ userId: user._id.toString() })
+    const leanUser = user as unknown as LeanUser;
+    const userId = leanUser._id.toString();
+    const teams = await Team.find({ userId })
       .populate('contestId')
       .sort({ createdAt: -1 })
       .lean();
     
     const history = teams.map(t => ({
-      _id: t._id.toString(),
+      _id: (t._id as any).toString(),
       name: (t.contestId as any)?.name || 'Contest',
       rank: t.rank,
       score: t.score,

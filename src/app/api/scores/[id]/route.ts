@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import { Contest } from '@/models/Contest';
 import { Team } from '@/models/Team';
+import { User } from '@/models/User';
 
 export async function GET(
   request: Request,
@@ -10,7 +12,19 @@ export async function GET(
   try {
     await dbConnect();
 
-    const contest = await Contest.findById(params.id).lean();
+    const contest = await Contest.findById(params.id).lean() as unknown as {
+      _id: mongoose.Types.ObjectId;
+      name: string;
+      description: string;
+      matchId: mongoose.Types.ObjectId;
+      entryFee: number;
+      maxParticipants: number;
+      prizePool: number;
+      status: string;
+      startTime: Date;
+      endTime: Date;
+      participants: Array<unknown>;
+    };
 
     if (!contest) {
       return NextResponse.json(
@@ -20,9 +34,20 @@ export async function GET(
     }
 
     const teams = await Team.find({ contestId: params.id })
-      .populate('userId', 'displayName username avatar')
+      .populate({ path: 'userId', model: User, select: 'displayName username avatar' })
       .sort({ score: -1 })
-      .lean();
+      .lean() as unknown as Array<{
+        _id: mongoose.Types.ObjectId;
+        name: string;
+        score: number;
+        userId: { _id: mongoose.Types.ObjectId; displayName: string; username: string; avatar: string } | null;
+        players: Array<{ playerId: mongoose.Types.ObjectId; name: string; role: string; creditCost: number; image: string }>;
+        captainId: mongoose.Types.ObjectId;
+        viceCaptainId: mongoose.Types.ObjectId;
+        totalCredits: number;
+        createdAt: Date;
+        updatedAt: Date;
+      }>;
 
     const rankedTeams = teams.map((team, index) => ({
       _id: team._id.toString(),
@@ -30,10 +55,10 @@ export async function GET(
       score: team.score,
       rank: index + 1,
       user: team.userId ? {
-        _id: (team.userId as any)._id?.toString(),
-        displayName: (team.userId as any).displayName,
-        username: (team.userId as any).username,
-        avatar: (team.userId as any).avatar,
+        _id: team.userId._id.toString(),
+        displayName: team.userId.displayName,
+        username: team.userId.username,
+        avatar: team.userId.avatar,
       } : undefined,
       players: team.players.map((player) => ({
         playerId: player.playerId?.toString(),

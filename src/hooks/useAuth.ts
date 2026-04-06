@@ -1,44 +1,40 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, initializeAuth } from '@/store/authStore';
 
+// No longer using localStorage for token - using cookies only
+// Keep USER_KEY only for backwards compatibility if needed
 const USER_KEY = 'umpires_call_user';
 
 export function useAuth() {
-  const { user, dbUser, isLoading, isAuthenticated, setUser, setDbUser, setLoading, logout } = useAuthStore();
+  const { user, dbUser, isLoading, isAuthenticated, setUser, setDbUser, setToken, logout } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    initializeAuth();
   }, []);
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    if (!mounted) return;
-
-    const storedUser = localStorage.getItem(USER_KEY);
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        setDbUser(parsed);
-      } catch (e) {
-        console.error('Error parsing stored user:', e);
-        localStorage.removeItem(USER_KEY);
-      }
-    }
-    setLoading(false);
-  }, [mounted, setUser, setDbUser, setLoading]);
-
-  const login = useCallback(async (userData: any) => {
-    // Save to localStorage
+  const login = useCallback(async (userData: any, token: string) => {
+    // Store user in localStorage (for initial load)
     localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    
+    // Set cookie for middleware and auth persistence
+    // Use SameSite=Strict for better security, or Lax for compatibility
+    document.cookie = `auth-token=${token}; path=/; max-age=${60 * 60 * 12}; SameSite=Strict`;
+    document.cookie = `user-data=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=${60 * 60 * 12}; SameSite=Strict`;
+    
+    // Update Zustand state
+    setToken(token);
     setUser(userData);
     setDbUser(userData);
-  }, [setUser, setDbUser]);
+  }, [setToken, setUser, setDbUser]);
 
   const handleLogout = useCallback(() => {
+    // Clear cookies
+    document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Strict';
+    document.cookie = 'user-data=; path=/; max-age=0; SameSite=Strict';
     localStorage.removeItem(USER_KEY);
     logout();
   }, [logout]);

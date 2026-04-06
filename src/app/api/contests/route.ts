@@ -3,6 +3,17 @@ import dbConnect from '@/lib/mongodb';
 import { Contest } from '@/models/Contest';
 import { Match } from '@/models/Match';
 
+// Type for lean document with populated matchId
+interface LeanContest {
+  _id: { toString(): string };
+  matchId?: {
+    _id: { toString(): string };
+    [key: string]: unknown;
+  };
+  participants?: string[];
+  [key: string]: unknown;
+}
+
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -32,7 +43,7 @@ export async function GET(request: Request) {
       .populate('matchId')
       .sort({ createdAt: -1 })
       .limit(50)
-      .lean();
+      .lean<LeanContest[]>();
     
     return NextResponse.json({
       success: true,

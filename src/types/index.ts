@@ -65,6 +65,7 @@ export interface Match {
   liveScore?: LiveScore;
   cricbuzzId?: string;
   scorecardUrl?: string;
+  lastScoreUpdate?: Date;
 }
 
 export interface TeamInfo {

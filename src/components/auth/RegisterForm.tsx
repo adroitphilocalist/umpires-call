@@ -13,10 +13,10 @@ function RegisterFormContent() {
   
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get phone from URL if passed from login
   useEffect(() => {
     const phoneParam = searchParams.get('phone');
     if (phoneParam) {
@@ -25,7 +25,6 @@ function RegisterFormContent() {
     }
   }, [searchParams]);
 
-  // Format phone number - only allow 10 digits
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
     return digits.slice(0, 10);
@@ -55,37 +54,22 @@ function RegisterFormContent() {
       }
 
       const formattedPhone = `+91${phone}`;
+      const generatedUsername = name.trim().replace(/\s+/g, '_').toLowerCase() + '_' + Date.now().toString().slice(-4);
       
-      // Check if user already exists
-      const checkResponse = await fetch(`/api/users?phone=${encodeURIComponent(formattedPhone)}`);
-      const checkData = await checkResponse.json();
-      
-      if (checkData.success && checkData.user) {
-        // User already exists - redirect to login
-        setError('Account already exists. Please login instead.');
-        setTimeout(() => {
-          router.push(`/login?phone=${phone}`);
-        }, 2000);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Create user directly (no OTP)
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: formattedPhone,
           displayName: name.trim(),
-          username: name.trim().replace(/\s+/g, '_').toLowerCase() + '_' + Date.now().toString().slice(-4),
+          username: username.trim() || generatedUsername,
         }),
       });
 
       const data = await response.json();
       
-      if (data.success && data.user) {
-        // Login after registration
-        login(data.user);
+      if (data.success && data.token) {
+        login(data.user, data.token);
         router.push('/dashboard');
       } else {
         setError(data.error || 'Failed to create account');

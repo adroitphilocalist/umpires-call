@@ -22,17 +22,25 @@ export async function GET(request: Request) {
     startOfToday.setHours(0, 0, 0, 0);
 
     const matchesWithComputedStatus = matches.map((m) => {
-      const matchDate = new Date(m.date);
-      const computedStatus = m.status === 'live'
-        ? 'live'
-        : matchDate < startOfToday
-          ? 'completed'
-          : 'upcoming';
+      // If DB status is explicitly 'completed', always show as completed
+      if (m.status === 'completed') {
+        return { ...m, status: 'completed' as const };
+      }
 
-      return {
-        ...m,
-        status: computedStatus,
-      };
+      // If DB status is 'live', check if match date has passed
+      // If match date is in the past, auto-complete it
+      const matchDate = new Date(m.date);
+      if (m.status === 'live' && matchDate < startOfToday) {
+        return { ...m, status: 'completed' as const };
+      }
+
+      // If match date is in the past and not 'live', it's completed
+      if (matchDate < startOfToday) {
+        return { ...m, status: 'completed' as const };
+      }
+
+      // Otherwise it's upcoming
+      return { ...m, status: 'upcoming' as const };
     });
 
     const filteredMatches = status

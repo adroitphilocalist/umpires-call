@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
-import { Team } from '@/models/Team';
+import { Team, ITeam } from '@/models/Team';
+
+type TeamDocument = mongoose.Require_id<ITeam>;
 
 export async function GET(
   request: Request,
@@ -9,7 +12,7 @@ export async function GET(
   try {
     await dbConnect();
     
-    const team = await Team.findById(params.id).lean();
+    const team = await Team.findById(params.id).lean().exec() as TeamDocument | null;
     
     if (!team) {
       return NextResponse.json(
@@ -57,7 +60,7 @@ export async function PUT(
         },
       },
       { new: true }
-    ).lean();
+    ).lean().exec() as TeamDocument | null;
     
     if (!team) {
       return NextResponse.json(
@@ -71,6 +74,10 @@ export async function PUT(
       team: {
         ...team,
         _id: team._id.toString(),
+        userId: team.userId?.toString(),
+        contestId: team.contestId?.toString(),
+        captainId: team.captainId?.toString(),
+        viceCaptainId: team.viceCaptainId?.toString(),
       },
     });
   } catch (error) {
