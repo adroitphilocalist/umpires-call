@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import { Contest } from '@/models/Contest';
+import { Contest, IContest } from '@/models/Contest';
 
 export async function GET(
   request: Request,
@@ -8,27 +8,27 @@ export async function GET(
 ) {
   try {
     await dbConnect();
-    
+
     const contest = await Contest.findById(params.id)
       .populate('matchId')
-      .lean();
-    
+      .lean<IContest & { matchId?: any }>();
+
     if (!contest) {
       return NextResponse.json(
         { success: false, error: 'Contest not found' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       contest: {
         ...contest,
-        _id: contest._id.toString(),
+        _id: String(contest._id),
         matchId: contest.matchId?._id?.toString(),
         match: contest.matchId ? {
           ...contest.matchId,
-          _id: contest.matchId._id.toString(),
+          _id: String(contest.matchId._id),
         } : undefined,
         participantCount: contest.participants?.length || 0,
         inviteCode: contest.inviteCode,
@@ -49,27 +49,27 @@ export async function PUT(
 ) {
   try {
     await dbConnect();
-    
+
     const data = await request.json();
-    
+
     const contest = await Contest.findByIdAndUpdate(
       params.id,
       { $set: data },
       { new: true }
-    ).lean();
-    
+    ).lean<IContest>();
+
     if (!contest) {
       return NextResponse.json(
         { success: false, error: 'Contest not found' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       contest: {
         ...contest,
-        _id: contest._id.toString(),
+        _id: String(contest._id),
       },
     });
   } catch (error) {

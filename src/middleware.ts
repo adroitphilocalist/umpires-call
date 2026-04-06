@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/api/contests',
   '/api/matches',
   '/api/players',
+  '/api/matches/bulk-update-cricbuzz',
 ];
 
 // Routes that require admin access (phone number check)

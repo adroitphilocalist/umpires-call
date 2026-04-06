@@ -87,7 +87,7 @@ export async function POST(request: Request) {
           const matchScore = scoresMap.get(playerIdStr);
 
           // Get player details
-          const player = await Player.findById(playerPlayer.playerId);
+          const player = await Player.findById(teamPlayer.playerId);
 
           // Determine multiplier
           let multiplier = 1;
