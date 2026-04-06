@@ -2,32 +2,31 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Match } from '@/models/Match';
 
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
 // Helper function to determine match status based on time
 function getMatchStatus(matchDate: Date, dbStatus?: string): 'completed' | 'live' | 'upcoming' {
   const now = new Date();
-  const matchTime = new Date(matchDate);
+  const rawMatchTime = new Date(matchDate);
+  const normalizedMatchTime = new Date(rawMatchTime.getTime() - IST_OFFSET_MS);
 
   // If explicitly set to completed in DB, always completed
   if (dbStatus === 'completed') {
     return 'completed';
   }
 
-  // Calculate time difference in hours
-  const timeDiffMs = now.getTime() - matchTime.getTime();
-  const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-
-  // If match started 5 or more hours ago → completed
-  if (timeDiffHours >= 5) {
-    return 'completed';
+  if (now < normalizedMatchTime) {
+    return 'upcoming';
   }
 
-  // If match has started but less than 5 hours ago → live
-  if (timeDiffHours >= 0) {
+  const endTime = new Date(normalizedMatchTime.getTime() + FIVE_HOURS_MS);
+
+  if (now < endTime) {
     return 'live';
   }
 
-  // If match hasn't started yet → upcoming
-  return 'upcoming';
+  return 'completed';
 }
 
 export async function POST(request: Request) {
