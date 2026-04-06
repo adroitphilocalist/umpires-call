@@ -7,18 +7,21 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleDateString('en-US', {
+  return d.toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
 export function formatTime(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleTimeString('en-US', {
+  return d.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
   });
 }
 

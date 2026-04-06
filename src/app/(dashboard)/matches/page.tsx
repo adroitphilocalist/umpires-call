@@ -7,15 +7,16 @@ import { Navbar, Card, CardHeader, CardTitle, CardContent, Badge, PageLoader } f
 import { Match } from '@/types';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 
-interface GroupedMatches {
-  [date: string]: Match[];
+interface GroupedMatchBucket {
+  dateKey: string;
+  dateLabel: string;
+  matches: Match[];
 }
 
 export default function MatchesPage() {
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [groupedMatches, setGroupedMatches] = useState<GroupedMatches>({});
+  const [groupedMatches, setGroupedMatches] = useState<GroupedMatchBucket[]>([]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -34,7 +35,6 @@ export default function MatchesPage() {
       const res = await fetch('/api/matches');
       const data = await res.json();
       if (data.success) {
-        setMatches(data.matches);
         groupMatchesByDate(data.matches);
       }
     } catch (error) {
@@ -42,22 +42,48 @@ export default function MatchesPage() {
     }
   };
 
-  const groupMatchesByDate = (matches: Match[]) => {
-    const grouped: GroupedMatches = {};
-    matches.forEach((match, index) => {
-      const dateObj = new Date(match.date);
-      const dateKey = dateObj.toLocaleDateString('en-IN', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push({ ...match, matchNumber: index + 1 } as Match & { matchNumber: number });
+  const formatMatchDateLabel = (date: Date) => {
+    return date.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
     });
-    setGroupedMatches(grouped);
+  };
+
+  const formatMatchTime = (dateValue: string | Date) => {
+    return new Date(dateValue).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC',
+    });
+  };
+
+  const groupMatchesByDate = (incomingMatches: Match[]) => {
+    const sortedMatches = [...incomingMatches].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const grouped = new Map<string, GroupedMatchBucket>();
+
+    sortedMatches.forEach((match) => {
+      const dateObj = new Date(match.date);
+      const dateKey = dateObj.toISOString().split('T')[0];
+
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, {
+          dateKey,
+          dateLabel: formatMatchDateLabel(dateObj),
+          matches: [],
+        });
+      }
+
+      grouped.get(dateKey)!.matches.push(match);
+    });
+
+    setGroupedMatches(Array.from(grouped.values()));
   };
 
   const getStatusVariant = (status: string) => {
@@ -71,20 +97,6 @@ export default function MatchesPage() {
     }
   };
 
-  const getMatchNumber = (match: Match, dateKey: string, index: number) => {
-    const dateMatches = groupedMatches[dateKey] || [];
-    const matchIndex = dateMatches.findIndex(m => m._id === match._id);
-    let globalIndex = 0;
-    Object.keys(groupedMatches).forEach(key => {
-      if (key === dateKey) {
-        globalIndex += matchIndex;
-      } else if (key < dateKey) {
-        globalIndex += groupedMatches[key].length;
-      }
-    });
-    return globalIndex + 1;
-  };
-
   if (isLoading) {
     return <PageLoader />;
   }
@@ -92,10 +104,6 @@ export default function MatchesPage() {
   if (!isAuthenticated) {
     return null;
   }
-
-  const dateKeys = Object.keys(groupedMatches).sort((a, b) => {
-    return new Date(a).getTime() - new Date(b).getTime();
-  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,7 +117,7 @@ export default function MatchesPage() {
           <p className="text-text-secondary mt-2">All matches for the season</p>
         </div>
 
-        {dateKeys.length === 0 ? (
+        {groupedMatches.length === 0 ? (
           <Card variant="elevated">
             <CardContent className="py-12 text-center">
               <p className="text-text-secondary">No matches found</p>
@@ -117,15 +125,21 @@ export default function MatchesPage() {
           </Card>
         ) : (
           <div className="space-y-8">
-            {dateKeys.map((dateKey) => (
-              <div key={dateKey}>
+            {groupedMatches.map((bucket, bucketIndex) => (
+              <div key={bucket.dateKey}>
                 <div className="flex items-center gap-2 mb-4">
                   <Calendar size={20} className="text-accent" />
-                  <h2 className="text-xl font-bold text-text-primary">{dateKey}</h2>
+                  <h2 className="text-xl font-bold text-text-primary">{bucket.dateLabel}</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(groupedMatches[dateKey] || []).map((match, idx) => (
+                  {bucket.matches.map((match, idx) => {
+                    const previousCount = groupedMatches
+                      .slice(0, bucketIndex)
+                      .reduce((sum, item) => sum + item.matches.length, 0);
+                    const matchNumber = previousCount + idx + 1;
+
+                    return (
                     <Card
                       key={match._id}
                       variant="elevated"
@@ -136,7 +150,7 @@ export default function MatchesPage() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant="default" className="text-xs">
-                                Match {getMatchNumber(match, dateKey, idx)}
+                                Match {matchNumber}
                               </Badge>
                               <Badge variant={getStatusVariant(match.status) as 'default' | 'success' | 'warning' | 'danger' | 'info'}>
                                 {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
@@ -155,12 +169,7 @@ export default function MatchesPage() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm text-text-secondary">
                             <Clock size={16} className="text-accent" />
-                            <span>
-                              {new Date(match.date).toLocaleTimeString('en-IN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
+                            <span>{formatMatchTime(match.date)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-text-secondary">
                             <MapPin size={16} className="text-accent" />
@@ -169,7 +178,7 @@ export default function MatchesPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  )})}
                 </div>
               </div>
             ))}
