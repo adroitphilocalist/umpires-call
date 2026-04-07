@@ -93,9 +93,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { icon: Trophy, label: 'Contests Joined', value: stats.contestsJoined, color: 'text-accent' },
-            { icon: Users, label: 'Total Wins', value: stats.totalWins, color: 'text-green-400' },
-            { icon: TrendingUp, label: 'Avg Rank', value: stats.avgRank || '-', color: 'text-blue-400' },
-            { icon: Calendar, label: 'Credits Left', value: '1000', color: 'text-purple-400' },
+            { icon: Users, label: 'Total Wins', value: stats.totalWins, color: 'text-success-text' },
+            { icon: TrendingUp, label: 'Avg Rank', value: stats.avgRank || '-', color: 'text-info-text' },
+            { icon: Calendar, label: 'Credits Left', value: '1000', color: 'text-text-primary' },
           ].map((stat, index) => (
             <Card key={index} variant="elevated">
               <div className="flex items-center gap-4">

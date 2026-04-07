@@ -134,11 +134,12 @@ export default function MyTeamPage() {
         <h3 className="text-lg font-semibold text-text-primary mb-3">{title}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {playerList.map(player => {
-            const isSelected = selectedPlayers.some(p => p.playerId === player._id);
+            const playerIdStr = String(player._id);
+            const isSelected = selectedPlayers.some(p => String(p.playerId) === playerIdStr);
             const canSelect = !isMatchStarted && selectedPlayers.length < MAX_PLAYERS && 
               !isSelected;
-            const isCaptain = captainId === player._id;
-            const isViceCaptain = viceCaptainId === player._id;
+            const isCaptain = String(captainId) === playerIdStr;
+            const isViceCaptain = String(viceCaptainId) === playerIdStr;
             
             return (
               <div
@@ -164,10 +165,10 @@ export default function MyTeamPage() {
                 <div className="flex items-center justify-between">
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded',
-                    player.role === 'batsman' && 'bg-blue-500/20 text-blue-400',
-                    player.role === 'bowler' && 'bg-red-500/20 text-red-400',
-                    player.role === 'all-rounder' && 'bg-purple-500/20 text-purple-400',
-                    player.role === 'wicket-keeper' && 'bg-green-500/20 text-green-400'
+                    player.role === 'batsman' && 'bg-info-bg/30 text-info-text',
+                    player.role === 'bowler' && 'bg-danger-bg/30 text-danger-text',
+                    player.role === 'all-rounder' && 'bg-card-purple/50 text-text-primary',
+                    player.role === 'wicket-keeper' && 'bg-success-bg/30 text-success-text'
                   )}>
                     {player.role}
                   </span>
@@ -187,8 +188,8 @@ export default function MyTeamPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMakeViceCaptain(player._id); }}
                           className={cn(
-                            'p-1 rounded hover:bg-yellow-400/20',
-                            isViceCaptain ? 'text-yellow-400' : 'text-text-secondary'
+                            'p-1 rounded hover:bg-warning-bg/30',
+                            isViceCaptain ? 'text-warning-text' : 'text-text-secondary'
                           )}
                           title="Make Vice-Captain"
                         >
@@ -207,10 +208,11 @@ export default function MyTeamPage() {
   };
 
   const handleSelectPlayer = (player: Player) => {
-    const isSelected = selectedPlayers.some(p => p.playerId === player._id);
+    const playerIdStr = String(player._id);
+    const isSelected = selectedPlayers.some(p => String(p.playerId) === playerIdStr);
     
     if (isSelected) {
-      handleRemovePlayer(player._id);
+      handleRemovePlayer(playerIdStr);
       return;
     }
 
@@ -225,10 +227,11 @@ export default function MyTeamPage() {
   };
 
   const handleRemovePlayer = (playerId: string) => {
-    const player = selectedPlayers.find(p => p.playerId === playerId);
-    if (playerId === captainId) setCaptainId('');
-    if (playerId === viceCaptainId) setViceCaptainId('');
-    setSelectedPlayers(selectedPlayers.filter(p => p.playerId !== playerId));
+    const playerIdStr = String(playerId);
+    const player = selectedPlayers.find(p => String(p.playerId) === playerIdStr);
+    if (String(captainId) === playerIdStr) setCaptainId('');
+    if (String(viceCaptainId) === playerIdStr) setViceCaptainId('');
+    setSelectedPlayers(selectedPlayers.filter(p => String(p.playerId) !== playerIdStr));
   };
 
   const handleMakeCaptain = (playerId: string) => {
@@ -350,7 +353,7 @@ export default function MyTeamPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {player.playerId === captainId && <Crown size={16} className="text-accent" />}
-                      {player.playerId === viceCaptainId && <Star size={16} className="text-yellow-400" />}
+                      {player.playerId === viceCaptainId && <Star size={16} className="text-warning-text" />}
                     </div>
                   </div>
                 ))}
@@ -443,11 +446,11 @@ export default function MyTeamPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {player.playerId === captainId && <Crown size={14} className="text-accent" />}
-                        {player.playerId === viceCaptainId && <Star size={14} className="text-yellow-400" />}
+                        {player.playerId === viceCaptainId && <Star size={14} className="text-warning-text" />}
                         <span className="text-sm font-bold text-accent">{player.creditCost}</span>
                         <button
                           onClick={() => handleRemovePlayer(player.playerId)}
-                          className="text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100"
+                          className="text-text-secondary hover:text-danger-text opacity-0 group-hover:opacity-100"
                         >
                           ×
                         </button>
@@ -462,7 +465,7 @@ export default function MyTeamPage() {
                     <span className={cn(
                       "font-bold",
                       roleCounts.batsman >= 1 && roleCounts.bowler >= 1 && roleCounts['all-rounder'] >= 1 && roleCounts['wicket-keeper'] >= 1
-                        ? "text-green-400" : "text-yellow-400"
+                        ? "text-success-text" : "text-warning-text"
                     )}>
                       {roleCounts.batsman >= 1 && roleCounts.bowler >= 1 && roleCounts['all-rounder'] >= 1 && roleCounts['wicket-keeper'] >= 1 ? "Met" : "Not Met"}
                     </span>
@@ -481,7 +484,7 @@ export default function MyTeamPage() {
                 )}
 
                 {isMatchStarted && (
-                  <p className="text-sm text-red-400 text-center">
+                  <p className="text-sm text-danger-text text-center">
                     Match started - team editing locked
                   </p>
                 )}
@@ -492,7 +495,7 @@ export default function MyTeamPage() {
                   </p>
                 )}
                 {selectedPlayers.length === MAX_PLAYERS && (!captainId || !viceCaptainId) && !isMatchStarted && (
-                  <p className="text-sm text-text-secondary text-center text-yellow-400">
+                  <p className="text-sm text-text-secondary text-center text-warning-text">
                     Select captain and vice-captain
                   </p>
                 )}

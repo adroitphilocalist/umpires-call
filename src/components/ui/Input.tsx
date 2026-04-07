@@ -27,9 +27,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             className={cn(
-              'w-full bg-surface border border-primary rounded-lg px-4 py-2.5 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors',
+              'w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors',
               icon && 'pl-10',
-              error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+              error && 'border-danger-border focus:border-danger-border focus:ring-danger-border',
               className
             )}
             ref={ref}
@@ -37,7 +37,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p className="mt-1.5 text-sm text-danger-text">{error}</p>
         )}
       </div>
     );

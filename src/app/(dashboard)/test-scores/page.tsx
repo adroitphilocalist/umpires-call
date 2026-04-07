@@ -145,11 +145,11 @@ export default function TestScoresPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Batting': return 'bg-blue-500/20 text-blue-400';
-      case 'Bowling': return 'bg-red-500/20 text-red-400';
-      case 'Fielding': return 'bg-green-500/20 text-green-400';
-      case 'Milestone': return 'bg-yellow-500/20 text-yellow-400';
-      case 'Strike Rate': return 'bg-purple-500/20 text-purple-400';
+      case 'Batting': return 'bg-info-bg/30 text-info-text';
+      case 'Bowling': return 'bg-danger-bg/30 text-danger-text';
+      case 'Fielding': return 'bg-success-bg/30 text-success-text';
+      case 'Milestone': return 'bg-warning-bg/40 text-warning-text';
+      case 'Strike Rate': return 'bg-card-purple/50 text-text-primary';
       case 'Economy': return 'bg-orange-500/20 text-orange-400';
       case 'Other': return 'bg-gray-500/20 text-gray-400';
       default: return 'bg-gray-500/20 text-gray-400';
@@ -220,9 +220,9 @@ export default function TestScoresPage() {
               />
 
               {error && (
-                <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-2">
-                  <AlertCircle size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-red-400 text-sm">{error}</p>
+                <div className="mt-4 p-3 bg-danger-bg/25 border border-danger-border/60 rounded-lg flex items-start gap-2">
+                  <AlertCircle size={18} className="text-danger-text mt-0.5 flex-shrink-0" />
+                  <p className="text-danger-text text-sm">{error}</p>
                 </div>
               )}
 
@@ -276,9 +276,9 @@ export default function TestScoresPage() {
                 {results.players.map((player, index) => {
                   const isExpanded = expandedPlayer === player.playerId;
                   const rankColors = {
-                    1: 'bg-yellow-500/20 text-yellow-400 border-yellow-500',
+                    1: 'bg-warning-bg/40 text-warning-text border-warning-border',
                     2: 'bg-gray-300/20 text-gray-300 border-gray-300',
-                    3: 'bg-amber-700/20 text-amber-700 border-amber-700',
+                    3: 'bg-warning-bg/25 text-warning-text border-warning-border',
                   };
                   const rankStyle = rankColors[index + 1 as keyof typeof rankColors];
 
@@ -378,7 +378,7 @@ export default function TestScoresPage() {
                                   </Badge>
                                   <span className="text-text-primary">{item.description}</span>
                                 </div>
-                                <span className={item.points >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                <span className={item.points >= 0 ? 'text-success-text' : 'text-danger-text'}>
                                   {item.points >= 0 ? '+' : ''}{item.points}
                                 </span>
                               </div>
@@ -402,7 +402,7 @@ export default function TestScoresPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
               <div>
-                <h4 className="font-semibold text-blue-400 mb-2">Batting</h4>
+                <h4 className="font-semibold text-info-text mb-2">Batting</h4>
                 <ul className="space-y-1 text-text-secondary">
                   <li>+1 per run</li>
                   <li>+4 per four</li>
@@ -417,7 +417,7 @@ export default function TestScoresPage() {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-red-400 mb-2">Bowling</h4>
+                <h4 className="font-semibold text-danger-text mb-2">Bowling</h4>
                 <ul className="space-y-1 text-text-secondary">
                   <li>+1 per dot ball</li>
                   <li>+30 per wicket</li>
@@ -429,7 +429,7 @@ export default function TestScoresPage() {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-green-400 mb-2">Fielding</h4>
+                <h4 className="font-semibold text-success-text mb-2">Fielding</h4>
                 <ul className="space-y-1 text-text-secondary">
                   <li>+8 per catch</li>
                   <li>+4 bonus at 3+ catches</li>

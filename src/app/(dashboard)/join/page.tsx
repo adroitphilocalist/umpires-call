@@ -101,7 +101,7 @@ export default function JoinContestPage() {
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 text-red-500 text-sm">
+                  <div className="flex items-center gap-2 text-danger-text text-sm">
                     <AlertCircle size={16} />
                     {error}
                   </div>
@@ -117,7 +117,7 @@ export default function JoinContestPage() {
               </form>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-3 text-green-500 justify-center">
+                <div className="flex items-center gap-3 text-success-text justify-center">
                   <CheckCircle size={24} />
                   <span className="font-medium">Contest Found!</span>
                 </div>

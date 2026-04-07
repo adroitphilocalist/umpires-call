@@ -6,3 +6,4 @@ export { Badge } from './Badge';
 export { Avatar } from './Avatar';
 export { Loader, PageLoader } from './Loader';
 export { Navbar } from './Navbar';
+export { ThemeToggle } from './ThemeToggle';

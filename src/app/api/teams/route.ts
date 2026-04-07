@@ -2,6 +2,47 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Team } from '@/models/Team';
 import { User } from '@/models/User';
+import { Contest } from '@/models/Contest';
+import { Match } from '@/models/Match';
+import { verifyToken } from '@/lib/jwt';
+
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
+function getMatchStatus(matchDate: Date, dbStatus?: string): 'completed' | 'live' | 'upcoming' {
+  if (dbStatus === 'completed') {
+    return 'completed';
+  }
+
+  const now = new Date();
+  const rawMatchTime = new Date(matchDate);
+  const normalizedMatchTime = new Date(rawMatchTime.getTime() - IST_OFFSET_MS);
+
+  if (now < normalizedMatchTime) {
+    return 'upcoming';
+  }
+
+  const endTime = new Date(normalizedMatchTime.getTime() + FIVE_HOURS_MS);
+  if (now < endTime) {
+    return 'live';
+  }
+
+  return 'completed';
+}
+
+function getRequesterUserId(request: Request): string | null {
+  const cookieHeader = request.headers.get('cookie') || '';
+  const tokenCookie = cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('auth-token='));
+
+  if (!tokenCookie) return null;
+
+  const token = decodeURIComponent(tokenCookie.substring('auth-token='.length));
+  const payload = verifyToken(token);
+  return payload?.userId || null;
+}
 
 export async function GET(request: Request) {
   try {
@@ -14,6 +55,19 @@ export async function GET(request: Request) {
     const query: any = {};
     if (userId) query.userId = userId;
     if (contestId) query.contestId = contestId;
+
+    const requesterUserId = getRequesterUserId(request);
+    let contestMatchStatus: 'completed' | 'live' | 'upcoming' | null = null;
+
+    if (contestId) {
+      const contest = await Contest.findById(contestId).lean() as any;
+      if (contest?.matchId) {
+        const match = await Match.findById(contest.matchId).lean() as any;
+        if (match?.date) {
+          contestMatchStatus = getMatchStatus(new Date(match.date), match.status);
+        }
+      }
+    }
     
     const teams = await Team.find(query)
       .sort({ score: -1 })
@@ -40,18 +94,29 @@ export async function GET(request: Request) {
           displayName: string;
         } | null;
         return {
+          ...(function () {
+            const ownerId = t.userId.toString();
+            const isOwner = requesterUserId === ownerId;
+            const shouldMaskPlayers = !userId && contestMatchStatus === 'upcoming' && !isOwner;
+
+            return {
+              ownerId,
+              isTeamLocked: shouldMaskPlayers,
+            };
+          })(),
           ...t,
           _id: t._id.toString(),
           userId: t.userId.toString(),
           contestId: t.contestId?.toString(),
           captainId: t.captainId.toString(),
           viceCaptainId: t.viceCaptainId.toString(),
-          players: t.players.map(p => ({
+          players: (!userId && contestMatchStatus === 'upcoming' && requesterUserId !== t.userId.toString()) ? [] : t.players.map(p => ({
             playerId: p.playerId.toString(),
             name: p.name,
             role: p.role,
             creditCost: p.creditCost,
           })),
+          playerCount: t.players.length,
           user: user ? {
             _id: user._id.toString(),
             displayName: user.displayName,

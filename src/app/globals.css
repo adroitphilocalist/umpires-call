@@ -5,17 +5,79 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #1a472a;
-  --color-primary-light: #2d5a3d;
-  --color-primary-dark: #0f2a1b;
-  --color-accent: #d4af37;
-  --color-accent-light: #e5c556;
-  --color-accent-dark: #b8962e;
-  --color-background: #0a0f0d;
-  --color-surface: #141c16;
-  --color-surface-light: #1e2a22;
-  --color-text-primary: #f5f5dc;
-  --color-text-secondary: #a8b5a0;
+  --color-primary: 149 210 160;
+  --color-primary-light: 190 231 198;
+  --color-primary-dark: 120 182 132;
+  --color-accent: 147 197 253;
+  --color-accent-light: 191 219 254;
+  --color-accent-dark: 96 165 250;
+  --color-background: 250 250 250;
+  --color-surface: 255 255 255;
+  --color-surface-light: 245 246 248;
+  --color-text-primary: 31 41 55;
+  --color-text-secondary: 75 85 99;
+  --color-border: 206 212 218;
+
+  --color-card-yellow: 255 243 191;
+  --color-card-green: 211 249 216;
+  --color-card-blue: 208 235 255;
+  --color-card-purple: 229 219 255;
+
+  --color-success-bg: 211 249 216;
+  --color-success-text: 31 112 61;
+  --color-success-border: 172 227 190;
+
+  --color-warning-bg: 255 243 191;
+  --color-warning-text: 146 84 16;
+  --color-warning-border: 245 214 153;
+
+  --color-danger-bg: 255 228 230;
+  --color-danger-text: 185 28 28;
+  --color-danger-border: 254 202 202;
+
+  --color-info-bg: 208 235 255;
+  --color-info-text: 29 78 216;
+  --color-info-border: 167 216 250;
+
+  --shadow-soft: 0 6px 18px rgba(31, 41, 55, 0.08);
+}
+
+.dark {
+  --color-primary: 26 71 42;
+  --color-primary-light: 45 90 61;
+  --color-primary-dark: 15 42 27;
+  --color-accent: 212 175 55;
+  --color-accent-light: 229 197 86;
+  --color-accent-dark: 184 150 46;
+  --color-background: 10 15 13;
+  --color-surface: 20 28 22;
+  --color-surface-light: 30 42 34;
+  --color-text-primary: 245 245 220;
+  --color-text-secondary: 168 181 160;
+  --color-border: 45 90 61;
+
+  --color-card-yellow: 54 48 24;
+  --color-card-green: 23 46 33;
+  --color-card-blue: 23 38 53;
+  --color-card-purple: 45 33 53;
+
+  --color-success-bg: 20 83 45;
+  --color-success-text: 74 222 128;
+  --color-success-border: 22 101 52;
+
+  --color-warning-bg: 113 63 18;
+  --color-warning-text: 250 204 21;
+  --color-warning-border: 133 77 14;
+
+  --color-danger-bg: 127 29 29;
+  --color-danger-text: 248 113 113;
+  --color-danger-border: 153 27 27;
+
+  --color-info-bg: 30 58 138;
+  --color-info-text: 96 165 250;
+  --color-info-border: 30 64 175;
+
+  --shadow-soft: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
 * {
@@ -34,6 +96,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -46,23 +109,24 @@ code, pre, .font-mono {
 
 @layer components {
   .btn-primary {
-    @apply bg-accent text-background hover:bg-accent-light font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-accent text-text-primary hover:bg-accent-light font-medium px-4 py-2 rounded-xl transition-colors;
   }
 
   .btn-secondary {
-    @apply bg-primary-light text-text-primary hover:bg-primary border border-primary font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-primary-light text-text-primary hover:bg-primary border border-border font-medium px-4 py-2 rounded-xl transition-colors;
   }
 
   .card {
-    @apply bg-surface border border-primary/30 rounded-xl p-4;
+    @apply bg-surface border border-border rounded-2xl p-4;
+    box-shadow: var(--shadow-soft);
   }
 
   .input-field {
-    @apply w-full bg-surface border border-primary rounded-lg px-4 py-2.5 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors;
+    @apply w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-text-primary placeholder-text-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors;
   }
 
   .glass {
-    @apply bg-surface/80 backdrop-blur-md border border-primary/30;
+    @apply bg-surface/85 backdrop-blur-md border border-border;
   }
 }
 
@@ -98,15 +162,15 @@ code, pre, .font-mono {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary-light);
+  background: rgb(var(--color-border));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent);
+  background: rgb(var(--color-accent));
 }
 
 ::selection {
-  background: var(--color-accent);
-  color: var(--color-background);
+  background: rgb(var(--color-accent));
+  color: rgb(var(--color-text-primary));
 }

@@ -122,21 +122,21 @@ export default function ProfilePage() {
             </Card>
             <Card variant="elevated">
               <div className="text-center py-4">
-                <Crown size={32} className="mx-auto text-yellow-400 mb-2" />
+                <Crown size={32} className="mx-auto text-warning-text mb-2" />
                 <p className="text-3xl font-bold text-text-primary">{stats.totalWins}</p>
                 <p className="text-sm text-text-secondary">Total Wins</p>
               </div>
             </Card>
             <Card variant="elevated">
               <div className="text-center py-4">
-                <TrendingUp size={32} className="mx-auto text-green-400 mb-2" />
+                <TrendingUp size={32} className="mx-auto text-success-text mb-2" />
                 <p className="text-3xl font-bold text-text-primary">{stats.avgRank || '-'}</p>
                 <p className="text-sm text-text-secondary">Avg Rank</p>
               </div>
             </Card>
             <Card variant="elevated">
               <div className="text-center py-4">
-                <Users size={32} className="mx-auto text-blue-400 mb-2" />
+                <Users size={32} className="mx-auto text-info-text mb-2" />
                 <p className="text-3xl font-bold text-text-primary">{stats.totalContests}</p>
                 <p className="text-sm text-text-secondary">Created</p>
               </div>
@@ -180,7 +180,7 @@ export default function ProfilePage() {
                         <span className="text-lg font-bold text-accent">{contest.score} pts</span>
                       </div>
                       {contest.prize > 0 && (
-                        <p className="text-sm text-green-400">Won ₹{contest.prize}</p>
+                        <p className="text-sm text-success-text">Won ₹{contest.prize}</p>
                       )}
                     </div>
                   </div>

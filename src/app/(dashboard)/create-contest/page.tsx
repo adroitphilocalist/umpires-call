@@ -110,7 +110,7 @@ export default function CreateContestPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400">
+          <div className="mb-6 p-4 bg-danger-bg/45 border border-danger-border rounded-lg text-danger-text">
             {error}
           </div>
         )}

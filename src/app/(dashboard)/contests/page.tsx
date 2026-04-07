@@ -130,7 +130,7 @@ function ContestsContent() {
                   {contest.prizePool > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-text-secondary text-sm">Prize Pool</span>
-                      <span className="font-bold text-green-400">₹{contest.prizePool.toLocaleString()}</span>
+                      <span className="font-bold text-success-text">₹{contest.prizePool.toLocaleString()}</span>
                     </div>
                   )}
                 </div>

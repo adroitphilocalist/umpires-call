@@ -16,9 +16,9 @@ export function Card({
   ...props
 }: CardProps) {
   const variants = {
-    default: 'bg-surface border border-primary/30',
-    elevated: 'bg-surface-light shadow-lg',
-    outlined: 'bg-transparent border border-primary',
+    default: 'bg-surface border border-border',
+    elevated: 'bg-surface-light border border-border shadow-[var(--shadow-soft)]',
+    outlined: 'bg-transparent border border-border',
   };
 
   const paddings = {
@@ -31,7 +31,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-xl transition-all',
+        'rounded-2xl transition-all',
         variants[variant],
         paddings[padding],
         className
@@ -77,7 +77,7 @@ export function CardContent({ className, children, ...props }: React.HTMLAttribu
 
 export function CardFooter({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('mt-4 pt-4 border-t border-primary/30 flex items-center gap-2', className)} {...props}>
+    <div className={cn('mt-4 pt-4 border-t border-border flex items-center gap-2', className)} {...props}>
       {children}
     </div>
   );

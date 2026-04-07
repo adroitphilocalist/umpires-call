@@ -16,7 +16,7 @@ import {
   PageLoader,
   Input
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +48,8 @@ interface Team {
   captainId: string;
   viceCaptainId: string;
   players: TeamPlayer[];
+  playerCount?: number;
+  isTeamLocked?: boolean;
   user?: {
     _id: string;
     displayName: string;
@@ -171,6 +173,10 @@ export default function ContestDetailPage() {
     } else {
       setExpandedTeamId(team._id);
       setExpandedPlayerId(null);
+      if (team.isTeamLocked) {
+        return;
+      }
+
       if (contest?.matchId && Object.keys(playerScores).length === 0 && !isFromCache) {
         await fetchPlayerScores(contest.matchId);
       }
@@ -372,7 +378,7 @@ export default function ContestDetailPage() {
                       onClick={copyInviteCode}
                       className="px-3"
                     >
-                      {copied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
+                      {copied ? <Check size={18} className="text-success-text" /> : <Copy size={18} />}
                     </Button>
                   </div>
                 </CardContent>
@@ -401,8 +407,8 @@ export default function ContestDetailPage() {
                   <div className="flex items-center gap-2 mt-2 text-xs text-text-secondary">
                     {isFromCache ? (
                       <>
-                        <Trophy size={12} className="text-green-400" />
-                        <span className="text-green-400">Final Results • Match Completed</span>
+                        <Trophy size={12} className="text-success-text" />
+                        <span className="text-success-text">Final Results • Match Completed</span>
                       </>
                     ) : (
                       <>
@@ -427,10 +433,11 @@ export default function ContestDetailPage() {
                     {teams.map((team, index) => {
                       const rank = index + 1;
                       const isExpanded = expandedTeamId === team._id;
+                      const isTeamLocked = !!team.isTeamLocked;
                       const rankStyles = {
-                        1: 'bg-yellow-500/20 text-yellow-400 border-yellow-500',
+                        1: 'bg-warning-bg/40 text-warning-text border-warning-border',
                         2: 'bg-gray-300/20 text-gray-300 border-gray-300',
-                        3: 'bg-amber-700/20 text-amber-700 border-amber-700',
+                        3: 'bg-warning-bg/25 text-warning-text border-warning-border',
                       };
                       const rankStyle = rankStyles[rank as keyof typeof rankStyles];
                       
@@ -454,6 +461,12 @@ export default function ContestDetailPage() {
                               <p className="text-sm text-text-secondary truncate">
                                 {team.name}
                               </p>
+                              {isTeamLocked && (
+                                <div className="mt-1 inline-flex items-center gap-1 text-xs text-warning-text">
+                                  <Lock size={12} />
+                                  Team hidden until match goes live
+                                </div>
+                              )}
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-accent">{team.score ?? 0}</p>
@@ -467,7 +480,20 @@ export default function ContestDetailPage() {
                           {isExpanded && (
                             <div className="mt-2 p-3 bg-surface/50 rounded-lg">
                               <p className="text-sm font-medium text-text-secondary mb-2">Team Players</p>
-                              {loadingScores ? (
+                              {isTeamLocked ? (
+                                <div className="rounded-lg border border-warning-border/30 bg-warning-bg/20 p-3">
+                                  <p className="text-sm text-warning-text flex items-center gap-2">
+                                    <Lock size={14} />
+                                    Opponent team is locked before match start.
+                                  </p>
+                                  <p className="text-xs text-text-secondary mt-1">
+                                    Player picks will be revealed once the match status becomes Live or Completed.
+                                  </p>
+                                  <p className="text-xs text-text-secondary mt-2">
+                                    Hidden players: {team.playerCount ?? 11}
+                                  </p>
+                                </div>
+                              ) : loadingScores ? (
                                 <p className="text-text-secondary text-sm">Loading scores...</p>
                               ) : (
                                 <div className="space-y-1">
@@ -479,14 +505,14 @@ export default function ContestDetailPage() {
 
                                     const getCategoryColor = (category: string) => {
                                       switch (category) {
-                                        case 'Batting': return 'bg-blue-500/20 text-blue-400';
-                                        case 'Bowling': return 'bg-red-500/20 text-red-400';
-                                        case 'Fielding': return 'bg-green-500/20 text-green-400';
-                                        case 'Milestone': return 'bg-yellow-500/20 text-yellow-400';
-                                        case 'Strike Rate': return 'bg-purple-500/20 text-purple-400';
+                                        case 'Batting': return 'bg-info-bg/30 text-info-text';
+                                        case 'Bowling': return 'bg-danger-bg/30 text-danger-text';
+                                        case 'Fielding': return 'bg-success-bg/30 text-success-text';
+                                        case 'Milestone': return 'bg-warning-bg/40 text-warning-text';
+                                        case 'Strike Rate': return 'bg-card-purple/50 text-text-primary';
                                         case 'Economy': return 'bg-orange-500/20 text-orange-400';
                                         case 'Other': return 'bg-gray-500/20 text-gray-400';
-                                        case 'Multiplier': return 'bg-amber-500/20 text-amber-400';
+                                        case 'Multiplier': return 'bg-warning-bg/35 text-warning-text';
                                         default: return 'bg-gray-500/20 text-gray-400';
                                       }
                                     };
@@ -508,7 +534,7 @@ export default function ContestDetailPage() {
                                           <div className="flex items-center gap-2">
                                             <div className="flex items-center gap-1">
                                               {isCaptain && <Crown size={14} className="text-accent" />}
-                                              {isViceCaptain && <Star size={14} className="text-yellow-400" />}
+                                              {isViceCaptain && <Star size={14} className="text-warning-text" />}
                                             </div>
                                             <div>
                                               <p className="text-sm text-text-primary">
@@ -528,7 +554,7 @@ export default function ContestDetailPage() {
                                             <div className="text-right">
                                               <p className={cn(
                                                 "font-bold font-mono",
-                                                isCaptain ? "text-accent" : isViceCaptain ? "text-yellow-400" : "text-text-primary"
+                                                isCaptain ? "text-accent" : isViceCaptain ? "text-warning-text" : "text-text-primary"
                                               )}>
                                                 {playerPoints}
                                               </p>
@@ -536,7 +562,7 @@ export default function ContestDetailPage() {
                                                 <p className="text-xs text-accent">2x</p>
                                               )}
                                               {isViceCaptain && (
-                                                <p className="text-xs text-yellow-400">1.5x</p>
+                                                <p className="text-xs text-warning-text">1.5x</p>
                                               )}
                                             </div>
                                           </div>
@@ -555,7 +581,7 @@ export default function ContestDetailPage() {
                                                     </Badge>
                                                     <span className="text-text-primary text-xs">{item.description}</span>
                                                   </div>
-                                                  <span className={item.points >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                                  <span className={item.points >= 0 ? 'text-success-text' : 'text-danger-text'}>
                                                     {item.points >= 0 ? '+' : ''}{item.points}
                                                   </span>
                                                 </div>
@@ -587,7 +613,7 @@ export default function ContestDetailPage() {
               <CardContent>
                 {hasJoined ? (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-green-400">
+                    <div className="flex items-center gap-2 text-success-text">
                       <Check size={20} />
                       <span className="font-medium">You have joined this contest</span>
                     </div>
@@ -746,15 +772,15 @@ export default function ContestDetailPage() {
                               </p>
                             </div>
                           ) : (
-                            <div className="text-center p-3 bg-surface rounded-lg border border-yellow-500/30">
-                              <p className="text-yellow-400 font-medium">⚖️ Equal points!</p>
+                            <div className="text-center p-3 bg-surface rounded-lg border border-warning-border/30">
+                              <p className="text-warning-text font-medium">⚖️ Equal points!</p>
                             </div>
                           )}
                           
                           <div className="flex items-center justify-center gap-8 p-2 bg-surface rounded-lg">
                             <div className="text-center">
                               <p className="text-xs text-text-secondary">Difference</p>
-                              <p className={cn("text-lg font-bold", overallDiff > 0 ? "text-green-400" : overallDiff < 0 ? "text-red-400" : "text-text-secondary")}>
+                              <p className={cn("text-lg font-bold", overallDiff > 0 ? "text-success-text" : overallDiff < 0 ? "text-danger-text" : "text-text-secondary")}>
                                 {overallDiff > 0 ? '+' : ''}{overallDiff}
                               </p>
                             </div>
@@ -778,10 +804,10 @@ export default function ContestDetailPage() {
                       
                       const getRoleColor = (role: string) => {
                         switch(role) {
-                          case 'batsman': return 'bg-blue-500/20 text-blue-400';
-                          case 'bowler': return 'bg-red-500/20 text-red-400';
-                          case 'all-rounder': return 'bg-purple-500/20 text-purple-400';
-                          case 'wicket-keeper': return 'bg-green-500/20 text-green-400';
+                          case 'batsman': return 'bg-info-bg/30 text-info-text';
+                          case 'bowler': return 'bg-danger-bg/30 text-danger-text';
+                          case 'all-rounder': return 'bg-card-purple/50 text-text-primary';
+                          case 'wicket-keeper': return 'bg-success-bg/30 text-success-text';
                           default: return 'bg-gray-500/20 text-gray-400';
                         }
                       };
@@ -791,7 +817,7 @@ export default function ContestDetailPage() {
                           {commonPlayers.length > 0 && (
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                <span className="w-2 h-2 rounded-full bg-warning-text"></span>
                                 Common Players ({commonPlayers.length})
                               </h4>
                               <div className="space-y-2">
@@ -811,15 +837,15 @@ export default function ContestDetailPage() {
                                       <div className="text-center">
                                         <span className="text-sm font-bold text-text-primary">{p1?.points || 0}</span>
                                         {player.playerId === team1Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {player.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-yellow-400" />}
+                                        {player.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
                                       </div>
                                       <div className="text-center">
                                         <span className="text-sm font-bold text-text-primary">{p2?.points || 0}</span>
                                         {player.playerId === team2Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {player.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-yellow-400" />}
+                                        {player.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
                                       </div>
                                       <div className="text-right">
-                                        <span className={cn("text-sm font-bold", diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-text-secondary")}>
+                                        <span className={cn("text-sm font-bold", diff > 0 ? "text-success-text" : diff < 0 ? "text-danger-text" : "text-text-secondary")}>
                                           {diff > 0 ? '+' : ''}{diff}
                                         </span>
                                       </div>
@@ -833,7 +859,7 @@ export default function ContestDetailPage() {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                <span className="w-2 h-2 rounded-full bg-info-text"></span>
                                 Only in {compareTeam1.user?.displayName} ({onlyInTeam1.length})
                               </h4>
                               <div className="space-y-2">
@@ -848,7 +874,7 @@ export default function ContestDetailPage() {
                                         </span>
                                         <span className="text-sm text-text-primary truncate">{player.name}</span>
                                         {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
-                                        {isViceCaptain && <Star size={12} className="text-yellow-400 flex-shrink-0" />}
+                                        {isViceCaptain && <Star size={12} className="text-warning-text flex-shrink-0" />}
                                       </div>
                                       <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
                                     </div>
@@ -859,7 +885,7 @@ export default function ContestDetailPage() {
                             
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                <span className="w-2 h-2 rounded-full bg-success-text"></span>
                                 Only in {compareTeam2.user?.displayName} ({onlyInTeam2.length})
                               </h4>
                               <div className="space-y-2">
@@ -874,7 +900,7 @@ export default function ContestDetailPage() {
                                         </span>
                                         <span className="text-sm text-text-primary truncate">{player.name}</span>
                                         {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
-                                        {isViceCaptain && <Star size={12} className="text-yellow-400 flex-shrink-0" />}
+                                        {isViceCaptain && <Star size={12} className="text-warning-text flex-shrink-0" />}
                                       </div>
                                       <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
                                     </div>
@@ -898,12 +924,12 @@ export default function ContestDetailPage() {
                             <div className="text-center p-3 bg-surface rounded-lg">
                               <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
                               <p className="font-medium text-text-primary">{team1ViceCaptain?.name || '-'}</p>
-                              <p className="text-yellow-400 text-sm">{playerScores[team1ViceCaptain?.playerId || ''] || 0} pts</p>
+                              <p className="text-warning-text text-sm">{playerScores[team1ViceCaptain?.playerId || ''] || 0} pts</p>
                             </div>
                             <div className="text-center p-3 bg-surface rounded-lg">
                               <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
                               <p className="font-medium text-text-primary">{team2ViceCaptain?.name || '-'}</p>
-                              <p className="text-yellow-400 text-sm">{playerScores[team2ViceCaptain?.playerId || ''] || 0} pts</p>
+                              <p className="text-warning-text text-sm">{playerScores[team2ViceCaptain?.playerId || ''] || 0} pts</p>
                             </div>
                           </div>
 

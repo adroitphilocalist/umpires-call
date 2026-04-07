@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Trophy, PlusCircle, User, Menu, X, Users, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from './Button';
 import RulesModal from './RulesModal';
+import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -54,11 +54,12 @@ export function Navbar() {
               })}
               <button
                 onClick={() => setShowRules(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300 border border-amber-700/50"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors bg-warning-bg/45 text-warning-text hover:bg-warning-bg/60 border border-warning-border"
               >
                 <BookOpen size={18} />
                 Rules
               </button>
+              <ThemeToggle />
             </div>
 
             <button
@@ -98,11 +99,14 @@ export function Navbar() {
                   setIsOpen(false);
                   setShowRules(true);
                 }}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full bg-amber-900/30 text-amber-400 hover:bg-amber-900/50 hover:text-amber-300 border border-amber-700/50"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors w-full bg-warning-bg/45 text-warning-text hover:bg-warning-bg/60 border border-warning-border"
               >
                 <BookOpen size={20} />
                 Fantasy Rules
               </button>
+              <div className="flex justify-end px-1 pt-1">
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         )}

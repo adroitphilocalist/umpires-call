@@ -9,6 +9,7 @@ import { Match, IMatch } from '@/models/Match';
 import { Contest } from '@/models/Contest';
 import { TeamFinalResult, ITeamFinalResult, ITeamPlayerResult } from '@/models/TeamFinalResult';
 import { ContestFinalResult } from '@/models/ContestFinalResult';
+import { verifyToken } from '@/lib/jwt';
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
@@ -44,6 +45,20 @@ function getMatchStatus(matchDate: Date, dbStatus?: string): 'completed' | 'live
   }
 
   return 'completed';
+}
+
+function getRequesterUserId(request: Request): string | null {
+  const cookieHeader = request.headers.get('cookie') || '';
+  const tokenCookie = cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('auth-token='));
+
+  if (!tokenCookie) return null;
+
+  const token = decodeURIComponent(tokenCookie.substring('auth-token='.length));
+  const payload = verifyToken(token);
+  return payload?.userId || null;
 }
 
 export async function GET(request: Request) {
@@ -165,6 +180,7 @@ export async function GET(request: Request) {
       const matchDate = new Date(match?.date || new Date());
       const computedStatus = getMatchStatus(matchDate, match?.status);
       const isMatchCompleted = computedStatus === 'completed';
+      const requesterUserId = getRequesterUserId(request);
 
       // If match is completed and has permanent results, use them
       if (isMatchCompleted && !forceLive) {
@@ -215,22 +231,33 @@ export async function GET(request: Request) {
         .sort({ score: -1 })
         .lean<ITeam[]>();
 
-      const leaderboard = teams.map((team, index) => ({
-        _id: team._id.toString(),
-        contestId: team.contestId.toString(),
-        name: team.name,
-        score: team.score,
-        rank: index + 1,
-        user: team.userId ? {
-          _id: (team.userId as any)._id?.toString(),
-          displayName: (team.userId as any).displayName,
-          username: (team.userId as any).username,
-          avatar: (team.userId as any).avatar,
-        } : undefined,
-        players: team.players,
-        captainId: team.captainId.toString(),
-        viceCaptainId: team.viceCaptainId.toString(),
-      }));
+      const leaderboard = teams.map((team, index) => {
+        const ownerId = (team.userId as any)?._id
+          ? (team.userId as any)._id.toString()
+          : team.userId?.toString();
+        const isOwner = !!requesterUserId && ownerId === requesterUserId;
+        const isTeamLocked = computedStatus === 'upcoming' && !isOwner;
+
+        return {
+          _id: team._id.toString(),
+          contestId: team.contestId.toString(),
+          name: team.name,
+          score: team.score,
+          rank: index + 1,
+          userId: ownerId,
+          user: team.userId ? {
+            _id: (team.userId as any)._id?.toString(),
+            displayName: (team.userId as any).displayName,
+            username: (team.userId as any).username,
+            avatar: (team.userId as any).avatar,
+          } : undefined,
+          players: isTeamLocked ? [] : team.players,
+          playerCount: team.players.length,
+          isTeamLocked,
+          captainId: team.captainId.toString(),
+          viceCaptainId: team.viceCaptainId.toString(),
+        };
+      });
 
       return NextResponse.json({
         success: true,

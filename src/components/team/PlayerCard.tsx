@@ -32,10 +32,10 @@ export function PlayerCard({
   const canSelect = !disabled && canAfford;
 
   const roleColors = {
-    batsman: 'bg-blue-900/50 text-blue-400',
-    bowler: 'bg-red-900/50 text-red-400',
-    'all-rounder': 'bg-purple-900/50 text-purple-400',
-    'wicket-keeper': 'bg-green-900/50 text-green-400',
+    batsman: 'bg-info-bg/60 text-info-text',
+    bowler: 'bg-danger-bg/60 text-danger-text',
+    'all-rounder': 'bg-card-purple/50 text-text-primary',
+    'wicket-keeper': 'bg-success-bg/60 text-success-text',
   };
 
   return (
@@ -54,7 +54,7 @@ export function PlayerCard({
       )}
       {isViceCaptain && (
         <div className="absolute top-2 right-2">
-          <Star size={20} className="text-yellow-400" />
+          <Star size={20} className="text-warning-text" />
         </div>
       )}
 

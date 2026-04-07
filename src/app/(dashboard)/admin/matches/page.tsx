@@ -229,7 +229,7 @@ export default function AdminMatchesPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
                         {match.hasScores ? (
-                          <span className="flex items-center gap-1 text-green-400 text-sm">
+                          <span className="flex items-center gap-1 text-success-text text-sm">
                             <CheckCircle size={14} />
                             Done
                           </span>

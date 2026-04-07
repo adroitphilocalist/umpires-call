@@ -112,16 +112,16 @@ export default function LeaderboardPage() {
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy size={20} className="text-yellow-400" />;
+    if (rank === 1) return <Trophy size={20} className="text-warning-text" />;
     if (rank === 2) return <Medal size={20} className="text-gray-400" />;
-    if (rank === 3) return <Medal size={20} className="text-amber-600" />;
+    if (rank === 3) return <Medal size={20} className="text-warning-text" />;
     return <span className="text-text-secondary font-mono">#{rank}</span>;
   };
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'bg-yellow-400/20 border-yellow-400';
+    if (rank === 1) return 'bg-warning-bg/30 border-warning-border';
     if (rank === 2) return 'bg-gray-400/20 border-gray-400';
-    if (rank === 3) return 'bg-amber-600/20 border-amber-600';
+    if (rank === 3) return 'bg-warning-bg/20 border-warning-border';
     return '';
   };
 
@@ -232,7 +232,7 @@ export default function LeaderboardPage() {
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-1">
                                         {isCaptain && <Crown size={14} className="text-accent" />}
-                                        {isViceCaptain && <Star size={14} className="text-yellow-400" />}
+                                        {isViceCaptain && <Star size={14} className="text-warning-text" />}
                                       </div>
                                       <div>
                                         <p className="text-sm text-text-primary font-medium">
@@ -246,7 +246,7 @@ export default function LeaderboardPage() {
                                     <div className="text-right">
                                       <p className={cn(
                                         "font-bold font-mono",
-                                        isCaptain ? "text-accent" : isViceCaptain ? "text-yellow-400" : "text-text-primary"
+                                        isCaptain ? "text-accent" : isViceCaptain ? "text-warning-text" : "text-text-primary"
                                       )}>
                                         {playerPoints}
                                       </p>
@@ -254,7 +254,7 @@ export default function LeaderboardPage() {
                                         <p className="text-xs text-accent">2x</p>
                                       )}
                                       {isViceCaptain && (
-                                        <p className="text-xs text-yellow-400">1.5x</p>
+                                        <p className="text-xs text-warning-text">1.5x</p>
                                       )}
                                     </div>
                                   </div>

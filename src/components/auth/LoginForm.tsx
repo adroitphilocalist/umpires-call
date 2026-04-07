@@ -95,7 +95,7 @@ function LoginFormContent() {
 
         <CardContent>
           {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-danger-bg/45 border border-danger-border rounded-lg text-danger-text text-sm">
               {error}
             </div>
           )}
