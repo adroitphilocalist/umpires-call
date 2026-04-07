@@ -86,6 +86,9 @@ export async function POST(request: Request) {
       date: data.date,
       status: data.status || 'upcoming',
       format: data.format || 'T20',
+      matchNumber: data.matchNumber,
+      cricbuzzId: data.cricbuzzId,
+      scorecardUrl: data.scorecardUrl,
     });
     
     return NextResponse.json({

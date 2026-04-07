@@ -1,0 +1,562 @@
+[
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "M.Chinnaswamy Stadium, Bengaluru",
+    "date": "2026-03-28T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149618",
+    "id": 149618
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Mumbai Indians",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-03-29T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149629",
+    "id": 149629
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Rajasthan Royals",
+    "venue": "Barsapara Cricket Stadium, Guwahati",
+    "date": "2026-03-30T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149640",
+    "id": 149640
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Punjab Kings",
+    "venue": "Mullanpur Stadium, New Chandigarh",
+    "date": "2026-03-31T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149651",
+    "id": 149651
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Delhi Capitals",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-04-01T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149662",
+    "id": 149662
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-04-02T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149673",
+    "id": 149673
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Punjab Kings",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-04-03T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149684",
+    "id": 149684
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Delhi Capitals",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-04-04T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149695",
+    "id": 149695
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Gujarat Titans",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-04-04T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149699",
+    "id": 149699
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Lucknow Super Giants",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-04-05T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149710",
+    "id": 149710
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Chennai Super Kings",
+    "venue": "M.Chinnaswamy Stadium, Bengaluru",
+    "date": "2026-04-05T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149721",
+    "id": 149721
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Punjab Kings",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-04-06T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149732",
+    "id": 149732
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Mumbai Indians",
+    "venue": "Barsapara Cricket Stadium, Guwahati",
+    "date": "2026-04-07T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149743",
+    "id": 149743
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Gujarat Titans",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-04-08T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149746",
+    "id": 149746
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Lucknow Super Giants",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-04-09T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149757",
+    "id": 149757
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Barsapara Cricket Stadium, Guwahati",
+    "date": "2026-04-10T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149768",
+    "id": 149768
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Sunrisers Hyderabad",
+    "venue": "Mullanpur Stadium, New Chandigarh",
+    "date": "2026-04-11T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149779",
+    "id": 149779
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Delhi Capitals",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-04-11T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149790",
+    "id": 149790
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Gujarat Titans",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-04-12T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149801",
+    "id": 149801
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-04-12T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149812",
+    "id": 149812
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Rajasthan Royals",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-04-13T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149823",
+    "id": 149823
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Kolkata Knight Riders",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-04-14T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149834",
+    "id": 149834
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Lucknow Super Giants",
+    "venue": "M.Chinnaswamy Stadium, Bengaluru",
+    "date": "2026-04-15T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149845",
+    "id": 149845
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Punjab Kings",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-04-16T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149856",
+    "id": 149856
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-04-17T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149867",
+    "id": 149867
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Delhi Capitals",
+    "venue": "M.Chinnaswamy Stadium, Bengaluru",
+    "date": "2026-04-18T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149878",
+    "id": 149878
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Chennai Super Kings",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-04-18T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149889",
+    "id": 149889
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Rajasthan Royals",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-04-19T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149900",
+    "id": 149900
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Lucknow Super Giants",
+    "venue": "Mullanpur Stadium, New Chandigarh",
+    "date": "2026-04-19T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149911",
+    "id": 149911
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Mumbai Indians",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-04-20T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149922",
+    "id": 149922
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Delhi Capitals",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-04-21T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149933",
+    "id": 149933
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Rajasthan Royals",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-04-22T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149944",
+    "id": 149944
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Chennai Super Kings",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-04-23T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149955",
+    "id": 149955
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Gujarat Titans",
+    "venue": "M.Chinnaswamy Stadium, Bengaluru",
+    "date": "2026-04-24T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149966",
+    "id": 149966
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Punjab Kings",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-04-25T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149977",
+    "id": 149977
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Sunrisers Hyderabad",
+    "venue": "Sawai Mansingh Stadium, Jaipur",
+    "date": "2026-04-25T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149988",
+    "id": 149988
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Chennai Super Kings",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-04-26T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/149999",
+    "id": 149999
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-04-26T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150010",
+    "id": 150010
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-04-27T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150021",
+    "id": 150021
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Rajasthan Royals",
+    "venue": "Mullanpur Stadium, New Chandigarh",
+    "date": "2026-04-28T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150032",
+    "id": 150032
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Sunrisers Hyderabad",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-04-29T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150043",
+    "id": 150043
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-04-30T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150054",
+    "id": 150054
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Delhi Capitals",
+    "venue": "Sawai Mansingh Stadium, Jaipur",
+    "date": "2026-05-01T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150065",
+    "id": 150065
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Mumbai Indians",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-05-02T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150076",
+    "id": 150076
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-05-03T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150087",
+    "id": 150087
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Punjab Kings",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-05-03T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150098",
+    "id": 150098
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Lucknow Super Giants",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-05-04T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150109",
+    "id": 150109
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Chennai Super Kings",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-05-05T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150120",
+    "id": 150120
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Punjab Kings",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-05-06T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150131",
+    "id": 150131
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-05-07T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150142",
+    "id": 150142
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-05-08T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150153",
+    "id": 150153
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Gujarat Titans",
+    "venue": "Sawai Mansingh Stadium, Jaipur",
+    "date": "2026-05-09T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150164",
+    "id": 150164
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Lucknow Super Giants",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-05-10T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150175",
+    "id": 150175
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Mumbai Indians",
+    "venue": "Shaheed Veer Narayan Singh Stadium, Raipur",
+    "date": "2026-05-10T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150186",
+    "id": 150186
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Delhi Capitals",
+    "venue": "HPCA Stadium, Dharamsala",
+    "date": "2026-05-11T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150197",
+    "id": 150197
+  },
+  {
+    "team1": "Gujarat Titans",
+    "team2": "Sunrisers Hyderabad",
+    "venue": "Narendra Modi Stadium, Ahmedabad",
+    "date": "2026-05-12T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150208",
+    "id": 150208
+  },
+  {
+    "team1": "Royal Challengers Bengaluru",
+    "team2": "Kolkata Knight Riders",
+    "venue": "Shaheed Veer Narayan Singh Stadium, Raipur",
+    "date": "2026-05-13T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150219",
+    "id": 150219
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Mumbai Indians",
+    "venue": "HPCA Stadium, Dharamsala",
+    "date": "2026-05-14T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150230",
+    "id": 150230
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Chennai Super Kings",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-05-15T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150241",
+    "id": 150241
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Gujarat Titans",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-05-16T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150252",
+    "id": 150252
+  },
+  {
+    "team1": "Punjab Kings",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "HPCA Stadium, Dharamsala",
+    "date": "2026-05-17T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150263",
+    "id": 150263
+  },
+  {
+    "team1": "Delhi Capitals",
+    "team2": "Rajasthan Royals",
+    "venue": "Arun Jaitley Stadium, Delhi",
+    "date": "2026-05-17T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150274",
+    "id": 150274
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Sunrisers Hyderabad",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-05-18T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150285",
+    "id": 150285
+  },
+  {
+    "team1": "Rajasthan Royals",
+    "team2": "Lucknow Super Giants",
+    "venue": "Sawai Mansingh Stadium, Jaipur",
+    "date": "2026-05-19T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150296",
+    "id": 150296
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Mumbai Indians",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-05-20T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150307",
+    "id": 150307
+  },
+  {
+    "team1": "Chennai Super Kings",
+    "team2": "Gujarat Titans",
+    "venue": "MA Chidambaram Stadium, Chennai",
+    "date": "2026-05-21T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150318",
+    "id": 150318
+  },
+  {
+    "team1": "Sunrisers Hyderabad",
+    "team2": "Royal Challengers Bengaluru",
+    "venue": "Rajiv Gandhi Stadium, Hyderabad",
+    "date": "2026-05-22T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150329",
+    "id": 150329
+  },
+  {
+    "team1": "Lucknow Super Giants",
+    "team2": "Punjab Kings",
+    "venue": "Ekana Stadium, Lucknow",
+    "date": "2026-05-23T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150340",
+    "id": 150340
+  },
+  {
+    "team1": "Mumbai Indians",
+    "team2": "Rajasthan Royals",
+    "venue": "Wankhede Stadium, Mumbai",
+    "date": "2026-05-24T15:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150351",
+    "id": 150351
+  },
+  {
+    "team1": "Kolkata Knight Riders",
+    "team2": "Delhi Capitals",
+    "venue": "Eden Gardens, Kolkata",
+    "date": "2026-05-24T19:30:00.000+00:00",
+    "url": "https://www.cricbuzz.com/api/mcenter/scorecard/150362",
+    "id": 150362
+  }
+]
