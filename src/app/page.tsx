@@ -234,7 +234,7 @@ export default function HomePage() {
               </span>
             </div>
             <p className="text-text-secondary text-sm">
-              © 2024 Umpire&apos;s Call. All rights reserved.
+              © 2026 Umpire&apos;s Call. All rights reserved.
             </p>
           </div>
         </div>
