@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Trophy, PlusCircle, User, Menu, X, Users, BookOpen } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Trophy, PlusCircle, User, Menu, X, Users, BookOpen, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import RulesModal from './RulesModal';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -17,8 +18,20 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <>
@@ -59,6 +72,17 @@ export function Navbar() {
                 <BookOpen size={18} />
                 Rules
               </button>
+              
+              {isAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-danger-text hover:bg-danger-bg/20"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </button>
+              )}
+
               <ThemeToggle />
             </div>
 
@@ -104,6 +128,17 @@ export function Navbar() {
                 <BookOpen size={20} />
                 Fantasy Rules
               </button>
+              
+              {isAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors w-full text-danger-text hover:bg-danger-bg/20 text-left"
+                >
+                  <LogOut size={20} />
+                  Logout
+                </button>
+              )}
+
               <div className="flex justify-end px-1 pt-1">
                 <ThemeToggle />
               </div>

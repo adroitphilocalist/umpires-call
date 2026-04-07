@@ -9,6 +9,8 @@ const PUBLIC_ROUTES = [
   '/register',
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/send-otp',
+  '/api/auth/test-db',
   '/api/scores',
   '/api/contests',
   '/api/matches',

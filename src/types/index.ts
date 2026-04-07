@@ -1,6 +1,7 @@
 export interface User {
   _id: string;
   phone: string;
+  email: string;
   displayName: string;
   username: string;
   avatar?: string;
@@ -112,6 +113,7 @@ export type ContestStatus = 'open' | 'filled' | 'completed';
 export interface AuthUser {
   _id: string;
   phone: string;
+  email: string;
   displayName: string;
   username: string;
   avatar?: string;
