@@ -203,7 +203,7 @@ export async function POST(request: Request) {
             externalId: player?.externalId || '',
             playerName: teamPlayer.name,
             role: teamPlayer.role,
-            creditCost: teamPlayer.creditCost,
+            creditCost: teamPlayer.creditCost ?? 0,
             points: Math.round(finalPoints * 100) / 100,
             multiplier,
             isCaptain,

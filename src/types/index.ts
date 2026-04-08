@@ -29,7 +29,8 @@ export interface TeamPlayer {
   playerId: string;
   name: string;
   role: PlayerRole;
-  creditCost: number;
+  externalId: string;
+  creditCost?: number;
   image?: string;
 }
 

@@ -83,7 +83,8 @@ export async function GET(request: Request) {
         playerId: { toString(): string };
         name: string;
         role: string;
-        creditCost: number;
+        externalId: string;
+        creditCost?: number;
       }>;
     }>;
     
@@ -114,6 +115,7 @@ export async function GET(request: Request) {
             playerId: p.playerId.toString(),
             name: p.name,
             role: p.role,
+            externalId: p.externalId,
             creditCost: p.creditCost,
           })),
           playerCount: t.players.length,

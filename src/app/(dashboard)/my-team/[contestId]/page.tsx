@@ -12,7 +12,7 @@ interface SelectedPlayer {
   playerId: string;
   name: string;
   role: string;
-  creditCost: number;
+  externalId: string;
 }
 
 const MAX_PLAYERS = 11;
@@ -48,6 +48,8 @@ export default function MyTeamPage() {
 
   const fetchData = async () => {
     try {
+      let externalIdByPlayerId: Record<string, string> = {};
+
       const [contestRes, teamRes] = await Promise.all([
         fetch(`/api/contests/${contestId}`),
         fetch(`/api/teams?userId=${user?._id}&contestId=${contestId}`),
@@ -71,6 +73,12 @@ export default function MyTeamPage() {
           
           if (playersData.success) {
             const allPlayers = playersData.players;
+            externalIdByPlayerId = allPlayers.reduce((acc: Record<string, string>, p: Player) => {
+              if (p.externalId) {
+                acc[String(p._id)] = p.externalId;
+              }
+              return acc;
+            }, {});
             const filteredPlayers = allPlayers.filter((p: Player) => {
               const playerTeamShort = getTeamShortName(p.team);
               return playerTeamShort === team1Short || playerTeamShort === team2Short;
@@ -88,7 +96,7 @@ export default function MyTeamPage() {
           playerId: p.playerId,
           name: p.name,
           role: p.role,
-          creditCost: p.creditCost,
+          externalId: p.externalId || externalIdByPlayerId[String(p.playerId)] || '',
         })));
         setCaptainId(team.captainId);
         setViceCaptainId(team.viceCaptainId);
@@ -222,7 +230,7 @@ export default function MyTeamPage() {
       playerId: player._id,
       name: player.name,
       role: player.role,
-      creditCost: player.creditValue,
+      externalId: player.externalId || '',
     }]);
   };
 
@@ -249,7 +257,12 @@ export default function MyTeamPage() {
     }
   };
 
-  const totalCredits = selectedPlayers.reduce((sum, p) => sum + p.creditCost, 0);
+  const getPlayerCredit = (playerId: string) => {
+    const selected = players.find(p => String(p._id) === String(playerId));
+    return selected?.creditValue || 0;
+  };
+
+  const totalCredits = selectedPlayers.reduce((sum, p) => sum + getPlayerCredit(p.playerId), 0);
   const creditsRemaining = MAX_CREDITS - totalCredits;
 
   const handleSaveTeam = async () => {
@@ -276,6 +289,11 @@ export default function MyTeamPage() {
     }
     if (captainId === viceCaptainId) {
       alert('Captain and vice-captain must be different');
+      return;
+    }
+
+    if (selectedPlayers.some((p) => !p.externalId)) {
+      alert('Some selected players are missing external IDs. Please reselect players and try again.');
       return;
     }
 
@@ -447,7 +465,7 @@ export default function MyTeamPage() {
                       <div className="flex items-center gap-2">
                         {player.playerId === captainId && <Crown size={14} className="text-accent" />}
                         {player.playerId === viceCaptainId && <Star size={14} className="text-warning-text" />}
-                        <span className="text-sm font-bold text-accent">{player.creditCost}</span>
+                        <span className="text-sm font-bold text-accent">{getPlayerCredit(player.playerId)}</span>
                         <button
                           onClick={() => handleRemovePlayer(player.playerId)}
                           className="text-text-secondary hover:text-danger-text opacity-0 group-hover:opacity-100"
