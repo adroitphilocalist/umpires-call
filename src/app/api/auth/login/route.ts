@@ -3,41 +3,60 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { Otp } from '@/models/Otp';
 import { createToken } from '@/lib/jwt';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
-    const { email, otp } = await request.json();
-    console.log('[DEBUG] Attempting Email OTP lookup for:', { email, otp });
+    const { email: identifier, otp, password } = await request.json();
 
-    if (!email || !otp) {
-      return NextResponse.json({ success: false, error: 'Email and OTP are required' }, { status: 400 });
+    if (!identifier) {
+      return NextResponse.json({ success: false, error: 'Email or Username is required' }, { status: 400 });
+    }
+    if (!otp && !password) {
+      return NextResponse.json({ success: false, error: 'OTP or Password is required' }, { status: 400 });
     }
 
     await dbConnect();
 
-    // Verify OTP
-    const otpRecord = await Otp.findOne({ email, otp });
-    console.log('[DEBUG] OTP lookup result:', otpRecord);
+    const user = await User.findOne({ 
+      $or: [
+        { email: identifier.toLowerCase() },
+        { username: identifier }
+      ]
+    });
     
-    if (!otpRecord) {
-      return NextResponse.json({ success: false, error: 'Invalid or expired OTP' }, { status: 400 });
-    }
-
-    // Check logical expiration to protect against MongoDB TTL time-drift issues
-    if (new Date() > new Date(otpRecord.expiresAt)) {
-      await Otp.deleteOne({ _id: otpRecord._id });
-      return NextResponse.json({ success: false, error: 'OTP has expired' }, { status: 400 });
-    }
-
-    // OTP verified, find user
-    const user = await User.findOne({ email });
+    // We retain actual email for OTP verify lookup
+    const email = user ? user.email : identifier.toLowerCase();
 
     if (!user) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    // Delete OTP record as it has been used
-    await Otp.deleteOne({ _id: otpRecord._id });
+    if (password) {
+      if (!user.password) {
+         return NextResponse.json({ success: false, error: 'No password set. Please log in with OTP.' }, { status: 400 });
+      }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+         return NextResponse.json({ success: false, error: 'Invalid password' }, { status: 400 });
+      }
+    } else if (otp) {
+      // Verify OTP
+      const otpRecord = await Otp.findOne({ email, otp });
+      
+      if (!otpRecord) {
+        return NextResponse.json({ success: false, error: 'Invalid or expired OTP' }, { status: 400 });
+      }
+
+      // Check logical expiration
+      if (new Date() > new Date(otpRecord.expiresAt)) {
+        await Otp.deleteOne({ _id: otpRecord._id });
+        return NextResponse.json({ success: false, error: 'OTP has expired' }, { status: 400 });
+      }
+      
+      // Delete OTP record as it has been used
+      await Otp.deleteOne({ _id: otpRecord._id });
+    }
 
     const token = createToken({
       userId: user._id.toString(),

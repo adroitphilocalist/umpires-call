@@ -15,6 +15,8 @@ function RegisterFormContent() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'DETAILS' | 'OTP'>('DETAILS');
   
@@ -78,6 +80,18 @@ function RegisterFormContent() {
         setIsLoading(false);
         return;
       }
+
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters');
+        setIsLoading(false);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
       
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -124,6 +138,7 @@ function RegisterFormContent() {
           email: email.toLowerCase(),
           displayName: name.trim(),
           username: username.trim() || generatedUsername,
+          password,
           otp,
         }),
       });
@@ -211,11 +226,31 @@ function RegisterFormContent() {
                 </p>
               </div>
               
+              <Input
+                type="password"
+                label="Password"
+                placeholder="Create a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                icon={<KeyRound size={18} />}
+                required
+              />
+
+              <Input
+                type="password"
+                label="Confirm Password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                icon={<KeyRound size={18} />}
+                required
+              />
+              
               <Button 
                 type="submit" 
                 className="w-full" 
                 isLoading={isLoading}
-                disabled={phone.length !== 10 || !name.trim() || !email.includes('@')}
+                disabled={phone.length !== 10 || !name.trim() || !email.includes('@') || password.length < 6 || password !== confirmPassword}
               >
                 Send OTP
               </Button>
