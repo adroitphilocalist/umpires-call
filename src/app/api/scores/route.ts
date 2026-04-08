@@ -71,6 +71,7 @@ export async function GET(request: Request) {
     const forceLive = searchParams.get('forceLive') === 'true';
 
     if (!matchId && !contestId) {
+      
       return NextResponse.json(
         { success: false, error: 'Either matchId or contestId is required' },
         { status: 400 }
@@ -80,6 +81,7 @@ export async function GET(request: Request) {
     if (matchId) {
       // Get match to check if completed
       const match = await Match.findById(matchId).lean<IMatch>();
+      console.log('Fetching scores for contest ID:');
 
       // Determine match status using time-based logic
       const matchDate = new Date(match?.date || new Date());
@@ -144,13 +146,37 @@ export async function GET(request: Request) {
         .sort({ points: -1 })
         .lean<PopulatedMatchScore[]>();
 
+      // Guard against legacy duplicate rows and return only one row per player key.
+      const dedupedScores = Array.from(
+        scores
+          .reduce((map, score) => {
+            const key = score.externalId || score.playerId?._id?.toString();
+            if (!key) return map;
+
+            const existing = map.get(key);
+            if (!existing) {
+              map.set(key, score);
+              return map;
+            }
+
+            const existingUpdated = existing.lastUpdated ? new Date(existing.lastUpdated).getTime() : 0;
+            const currentUpdated = score.lastUpdated ? new Date(score.lastUpdated).getTime() : 0;
+            if (currentUpdated > existingUpdated) {
+              map.set(key, score);
+            }
+
+            return map;
+          }, new Map<string, PopulatedMatchScore>())
+          .values()
+      );
+
       return NextResponse.json({
         success: true,
         matchId,
         isCompleted: isMatchCompleted,
         lastScoreUpdate: match?.lastScoreUpdate || null,
         isFromCache: false,
-        scores: scores.map((score) => ({
+        scores: dedupedScores.map((score) => ({
           _id: score._id.toString(),
           matchId: score.matchId.toString(),
           playerId: score.playerId?._id?.toString(),
