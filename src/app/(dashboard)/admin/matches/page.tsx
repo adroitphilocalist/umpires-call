@@ -12,9 +12,6 @@ interface MatchWithScores extends Match {
 }
 
 export default function AdminMatchesPage() {
-  const AUTO_CALC_CRON_MINUTES = 3;
-  const AUTO_CALC_INTERVAL_MS = AUTO_CALC_CRON_MINUTES * 60 * 1000;
-
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [matches, setMatches] = useState<MatchWithScores[]>([]);
@@ -22,6 +19,8 @@ export default function AdminMatchesPage() {
   const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '' });
   const [saving, setSaving] = useState<string | null>(null);
   const [calculating, setCalculating] = useState<string | null>(null);
+  const [autoCalcMinutes, setAutoCalcMinutes] = useState(1);
+  const [nextAutoRunAt, setNextAutoRunAt] = useState<number | null>(null);
   const [nowTs, setNowTs] = useState<number>(Date.now());
 
   useEffect(() => {
@@ -45,16 +44,35 @@ export default function AdminMatchesPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || autoCalcMinutes < 1) {
+      setNextAutoRunAt(null);
       return;
     }
 
-    const refreshTimer = setInterval(() => {
-      fetchMatches();
-    }, 60 * 1000);
+    const eligibleLiveMatches = matches.filter((m) => m.status === 'live' && !!m.scorecardUrl);
+    if (eligibleLiveMatches.length === 0) {
+      setNextAutoRunAt(null);
+      return;
+    }
 
-    return () => clearInterval(refreshTimer);
-  }, [isAuthenticated]);
+    const intervalMs = autoCalcMinutes * 60 * 1000;
+    setNextAutoRunAt(Date.now() + intervalMs);
+
+    const timer = setInterval(() => {
+      const liveMatches = matches.filter((m) => m.status === 'live' && !!m.scorecardUrl);
+      if (liveMatches.length === 0) {
+        setNextAutoRunAt(null);
+        return;
+      }
+
+      liveMatches.forEach((liveMatch) => {
+        calculatePoints(liveMatch, true);
+      });
+      setNextAutoRunAt(Date.now() + intervalMs);
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [isAuthenticated, autoCalcMinutes, matches]);
 
   const fetchMatches = async () => {
     try {
@@ -95,7 +113,7 @@ export default function AdminMatchesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setMatches(prev => prev.map(m => m._id === matchId ? { ...m, ...data.match } : m));
+        setMatches(matches.map(m => m._id === matchId ? { ...m, ...data.match } : m));
         setEditingId(null);
       } else {
         console.error('Error saving scorecard:', data.error);
@@ -177,8 +195,7 @@ export default function AdminMatchesPage() {
   };
 
   const hasEligibleLiveMatches = matches.some((m) => m.status === 'live' && !!m.scorecardUrl);
-  const elapsedInCycleMs = nowTs % AUTO_CALC_INTERVAL_MS;
-  const remainingMs = AUTO_CALC_INTERVAL_MS - elapsedInCycleMs;
+  const remainingMs = nextAutoRunAt ? nextAutoRunAt - nowTs : 0;
 
   if (isLoading) {
     return <PageLoader />;
@@ -198,13 +215,23 @@ export default function AdminMatchesPage() {
             Manage Match Scorecards
           </h1>
           <p className="text-text-secondary mt-2">Set Cricbuzz scorecard URLs and IDs for matches</p>
-          <div className="mt-4 text-sm text-text-secondary">
-            Auto-calculate runs on server every {AUTO_CALC_CRON_MINUTES} minutes.
+          <div className="mt-4 flex items-center gap-3">
+            <span className="text-sm text-text-secondary">Auto-calculate live matches every</span>
+            <Input
+              type="number"
+              min={1}
+              value={autoCalcMinutes}
+              onChange={(e) => setAutoCalcMinutes(Math.max(1, Number(e.target.value) || 3))}
+              className="w-24 text-sm"
+            />
+            <span className="text-sm text-text-secondary">minute(s)</span>
           </div>
           <div className="mt-2 text-sm text-text-secondary">
             Next auto-calculate:{' '}
             {!hasEligibleLiveMatches ? (
               <span className="text-warning-text font-medium">Paused (no live match with scorecard URL)</span>
+            ) : remainingMs <= 0 ? (
+              <span className="text-accent font-medium">Refreshing...</span>
             ) : (
               <span className="text-accent font-medium">{formatRemaining(remainingMs)}</span>
             )}

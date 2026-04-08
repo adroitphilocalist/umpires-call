@@ -296,20 +296,6 @@ export default function ContestDetailPage() {
     }
   }, [user, contestId, contest?.matchId]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !user || !contestId) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      fetchContestDetails();
-      checkUserTeam();
-      fetchAllTeams();
-    }, 2 * 60 * 1000);
-
-    return () => clearInterval(timer);
-  }, [isAuthenticated, user, contestId, contest?.matchId]);
-
   const fetchContestDetails = async () => {
     try {
       const res = await fetch(`/api/contests/${contestId}`);
