@@ -1116,9 +1116,41 @@ export default function ContestDetailPage() {
                       const team1Players = compareTeam1.players.map(p => ({ ...p, points: getPlayerPoints(p) }));
                       const team2Players = compareTeam2.players.map(p => ({ ...p, points: getPlayerPoints(p) }));
 
-                      const commonPlayers = team1Players.filter(p1 => team2Players.some(p2 => p2.playerId === p1.playerId));
-                      const onlyInTeam1 = team1Players.filter(p1 => !team2Players.some(p2 => p2.playerId === p1.playerId));
-                      const onlyInTeam2 = team2Players.filter(p2 => !team1Players.some(p1 => p1.playerId === p2.playerId));
+                      const normalizeName = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
+                      const getCompareKey = (player: typeof team1Players[number]) => {
+                        if (player.externalId) return `ext:${player.externalId}`;
+                        if (player.playerId) return `id:${player.playerId}`;
+                        return `name:${normalizeName(player.name)}`;
+                      };
+
+                      const team2ByKey = new Map(team2Players.map((p) => [getCompareKey(p), p]));
+                      const matchedKeys = new Set<string>();
+
+                      const commonPairs = team1Players
+                        .map((p1) => {
+                          const key = getCompareKey(p1);
+                          const p2 = team2ByKey.get(key);
+                          if (!p2) return null;
+                          matchedKeys.add(key);
+                          return {
+                            key,
+                            p1,
+                            p2,
+                            diff: (p1.points || 0) - (p2.points || 0),
+                          };
+                        })
+                        .filter((entry): entry is { key: string; p1: typeof team1Players[number]; p2: typeof team2Players[number]; diff: number } => !!entry);
+
+                      const onlyInTeam1 = team1Players.filter((p1) => !team2ByKey.has(getCompareKey(p1)));
+                      const onlyInTeam2 = team2Players.filter((p2) => !matchedKeys.has(getCompareKey(p2)));
+
+                      const neutralCommon = commonPairs.filter((pair) => Math.abs(pair.diff) < 0.01);
+                      const impactCommon = commonPairs.filter((pair) => Math.abs(pair.diff) >= 0.01);
+
+                      const team1UniqueTotal = onlyInTeam1.reduce((sum, p) => sum + (p.points || 0), 0);
+                      const team2UniqueTotal = onlyInTeam2.reduce((sum, p) => sum + (p.points || 0), 0);
+                      const commonImpactNet = impactCommon.reduce((sum, pair) => sum + pair.diff, 0);
+                      const differentialNet = team1UniqueTotal - team2UniqueTotal + commonImpactNet;
 
                       const team1Captain = compareTeam1.players.find(p => p.playerId === compareTeam1.captainId);
                       const team1ViceCaptain = compareTeam1.players.find(p => p.playerId === compareTeam1.viceCaptainId);
@@ -1137,35 +1169,59 @@ export default function ContestDetailPage() {
 
                       return (
                         <>
-                          {commonPlayers.length > 0 && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="p-3 bg-surface rounded-lg border border-primary/30">
+                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam1.user?.displayName}</p>
+                              <p className="text-xl font-bold text-accent">{Math.round(team1UniqueTotal * 100) / 100}</p>
+                            </div>
+                            <div className="p-3 bg-surface rounded-lg border border-primary/30 text-center">
+                              <p className="text-xs text-text-secondary">Net Differential Impact</p>
+                              <p className={cn(
+                                "text-xl font-bold",
+                                differentialNet > 0 ? "text-success-text" : differentialNet < 0 ? "text-danger-text" : "text-text-secondary"
+                              )}>
+                                {differentialNet > 0 ? '+' : ''}{Math.round(differentialNet * 100) / 100}
+                              </p>
+                            </div>
+                            <div className="p-3 bg-surface rounded-lg border border-primary/30 text-right">
+                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam2.user?.displayName}</p>
+                              <p className="text-xl font-bold text-accent">{Math.round(team2UniqueTotal * 100) / 100}</p>
+                            </div>
+                          </div>
+
+                          {commonPairs.length > 0 && (
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-warning-text"></span>
-                                Common Players ({commonPlayers.length})
+                                Common Players ({commonPairs.length})
                               </h4>
+                              {neutralCommon.length > 0 && (
+                                <p className="text-xs text-text-secondary mb-2">
+                                  Neutral common picks: {neutralCommon.length} players (no point swing)
+                                </p>
+                              )}
                               <div className="space-y-2">
-                                {commonPlayers.map(player => {
-                                  const p1 = team1Players.find(p => p.playerId === player.playerId);
-                                  const p2 = team2Players.find(p => p.playerId === player.playerId);
-                                  const diff = (p1?.points || 0) - (p2?.points || 0);
+                                {commonPairs
+                                  .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+                                  .map(({ key, p1, p2, diff }) => {
 
                                   return (
-                                    <div key={player.playerId} className="grid grid-cols-5 gap-2 items-center p-2 bg-surface rounded">
+                                    <div key={key} className="grid grid-cols-5 gap-2 items-center p-2 bg-surface rounded border border-primary/20">
                                       <div className="col-span-2 flex items-center gap-2">
-                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(player.role))}>
-                                          {player.role}
+                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(p1.role))}>
+                                          {p1.role}
                                         </span>
-                                        <span className="text-sm text-text-primary truncate">{player.name}</span>
+                                        <span className="text-sm text-text-primary truncate">{p1.name}</span>
                                       </div>
                                       <div className="text-center">
                                         <span className="text-sm font-bold text-text-primary">{p1?.points || 0}</span>
-                                        {player.playerId === team1Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {player.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
+                                        {p1.playerId === team1Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
+                                        {p1.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
                                       </div>
                                       <div className="text-center">
                                         <span className="text-sm font-bold text-text-primary">{p2?.points || 0}</span>
-                                        {player.playerId === team2Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {player.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
+                                        {p2.playerId === team2Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
+                                        {p2.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
                                       </div>
                                       <div className="text-right">
                                         <span className={cn("text-sm font-bold", diff > 0 ? "text-success-text" : diff < 0 ? "text-danger-text" : "text-text-secondary")}>
@@ -1183,7 +1239,7 @@ export default function ContestDetailPage() {
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-info-text"></span>
-                                Only in {compareTeam1.user?.displayName} ({onlyInTeam1.length})
+                                Differential Picks • {compareTeam1.user?.displayName} ({onlyInTeam1.length})
                               </h4>
                               <div className="space-y-2">
                                 {onlyInTeam1.map(player => {
@@ -1209,7 +1265,7 @@ export default function ContestDetailPage() {
                             <div>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-success-text"></span>
-                                Only in {compareTeam2.user?.displayName} ({onlyInTeam2.length})
+                                Differential Picks • {compareTeam2.user?.displayName} ({onlyInTeam2.length})
                               </h4>
                               <div className="space-y-2">
                                 {onlyInTeam2.map(player => {
