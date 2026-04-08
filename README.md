@@ -284,45 +284,6 @@ The runner will:
 4. Send points to `/api/scores/update`
 5. Team scores are automatically calculated (Captain: 2x, Vice-Captain: 1.5x)
 
-### Step 2B: Production Auto-Calculate (Vercel Cron)
-
-In production, score calculation runs in the background every 3 minutes via Vercel Cron.
-
-1. Ensure `vercel.json` includes:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/auto-calculate-live",
-      "schedule": "*/3 * * * *"
-    }
-  ]
-}
-```
-
-2. Add environment variable in Vercel Project Settings:
-
-```bash
-CRON_SECRET=eec35f796c90f1353da6f7cdefca512e55a376ae37ee2474f1fec11fa7088afc
-```
-
-3. Route auth behavior:
-The cron route checks the `Authorization` header as:
-
-```text
-Authorization: Bearer <CRON_SECRET>
-```
-
-If `CRON_SECRET` is set, unauthorized requests are rejected with `401`.
-
-4. Optional local/manual test:
-
-```bash
-curl -X GET http://localhost:3000/api/cron/auto-calculate-live \
-  -H "Authorization: Bearer eec35f796c90f1353da6f7cdefca512e55a376ae37ee2474f1fec11fa7088afc"
-```
-
 ### Step 3: View Leaderboard
 
 ```bash
