@@ -3,14 +3,15 @@ import dbConnect from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { Otp } from '@/models/Otp';
 import { createToken } from '@/lib/jwt';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
-    const { phone, email, displayName, username, otp } = await request.json();
+    const { phone, email, displayName, username, password, otp } = await request.json();
     
-    if (!phone || !email || !displayName || !username || !otp) {
+    if (!phone || !email || !displayName || !username || !password || !otp) {
       return NextResponse.json(
-        { success: false, error: 'Phone, email, displayName, username, and OTP are required' },
+        { success: false, error: 'Phone, email, displayName, username, password, and OTP are required' },
         { status: 400 }
       );
     }
@@ -40,11 +41,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Username already taken' }, { status: 409 });
     }
     
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await User.create({
       phone,
       email,
       displayName,
       username,
+      password: hashedPassword,
     });
 
     // Delete OTP record as it has been used
