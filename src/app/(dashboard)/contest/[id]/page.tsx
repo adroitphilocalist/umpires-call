@@ -296,6 +296,14 @@ export default function ContestDetailPage() {
     }
   }, [user, contestId, contest?.matchId]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      window.location.reload();
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const fetchContestDetails = async () => {
     try {
       const res = await fetch(`/api/contests/${contestId}`);
