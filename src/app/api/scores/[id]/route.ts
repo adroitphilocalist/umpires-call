@@ -11,6 +11,7 @@ export async function GET(
 ) {
   try {
     await dbConnect();
+    
 
     const contest = await Contest.findById(params.id).lean() as unknown as {
       _id: mongoose.Types.ObjectId;

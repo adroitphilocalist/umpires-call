@@ -12,6 +12,9 @@ interface MatchWithScores extends Match {
 }
 
 export default function AdminMatchesPage() {
+  const AUTO_CALC_CRON_MINUTES = 3;
+  const AUTO_CALC_INTERVAL_MS = AUTO_CALC_CRON_MINUTES * 60 * 1000;
+
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [matches, setMatches] = useState<MatchWithScores[]>([]);
@@ -19,6 +22,7 @@ export default function AdminMatchesPage() {
   const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '' });
   const [saving, setSaving] = useState<string | null>(null);
   const [calculating, setCalculating] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState<number>(Date.now());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -30,6 +34,26 @@ export default function AdminMatchesPage() {
     if (isAuthenticated) {
       fetchMatches();
     }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const refreshTimer = setInterval(() => {
+      fetchMatches();
+    }, 60 * 1000);
+
+    return () => clearInterval(refreshTimer);
   }, [isAuthenticated]);
 
   const fetchMatches = async () => {
@@ -71,7 +95,7 @@ export default function AdminMatchesPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setMatches(matches.map(m => m._id === matchId ? { ...m, ...data.match } : m));
+        setMatches(prev => prev.map(m => m._id === matchId ? { ...m, ...data.match } : m));
         setEditingId(null);
       } else {
         console.error('Error saving scorecard:', data.error);
@@ -83,13 +107,18 @@ export default function AdminMatchesPage() {
     }
   };
 
-  const calculatePoints = async (match: MatchWithScores) => {
+  const calculatePoints = async (match: MatchWithScores, silent = false) => {
     if (!match.scorecardUrl) {
-      alert('Please set the scorecard URL first');
+      if (!silent) {
+        alert('Please set the scorecard URL first');
+      }
       return;
     }
 
-    setCalculating(match._id);
+    if (!silent) {
+      setCalculating(match._id);
+    }
+
     try {
       const res = await fetch('/api/scores/calculate', {
         method: 'POST',
@@ -102,18 +131,30 @@ export default function AdminMatchesPage() {
       const data = await res.json();
       
       if (data.success) {
-        setMatches(matches.map(m => 
-          m._id === match._id ? { ...m, hasScores: true } : m
-        ));
-        alert(`Points calculated successfully! ${data.data.playerScores?.length || 0} players updated.`);
+        setMatches(prev => prev.map(m => {
+          if (m._id !== match._id || m.hasScores) {
+            return m;
+          }
+          return { ...m, hasScores: true };
+        }));
+
+        if (!silent) {
+          alert(`Points calculated successfully! ${data.data.playerScores?.length || 0} players updated.`);
+        }
       } else {
-        alert(data.error || 'Failed to calculate points');
+        if (!silent) {
+          alert(data.error || 'Failed to calculate points');
+        }
       }
     } catch (error) {
       console.error('Error calculating points:', error);
-      alert('Failed to calculate points');
+      if (!silent) {
+        alert('Failed to calculate points');
+      }
     } finally {
-      setCalculating(null);
+      if (!silent) {
+        setCalculating(null);
+      }
     }
   };
 
@@ -127,6 +168,17 @@ export default function AdminMatchesPage() {
         return 'warning';
     }
   };
+
+  const formatRemaining = (ms: number) => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  const hasEligibleLiveMatches = matches.some((m) => m.status === 'live' && !!m.scorecardUrl);
+  const elapsedInCycleMs = nowTs % AUTO_CALC_INTERVAL_MS;
+  const remainingMs = AUTO_CALC_INTERVAL_MS - elapsedInCycleMs;
 
   if (isLoading) {
     return <PageLoader />;
@@ -146,6 +198,17 @@ export default function AdminMatchesPage() {
             Manage Match Scorecards
           </h1>
           <p className="text-text-secondary mt-2">Set Cricbuzz scorecard URLs and IDs for matches</p>
+          <div className="mt-4 text-sm text-text-secondary">
+            Auto-calculate runs on server every {AUTO_CALC_CRON_MINUTES} minutes.
+          </div>
+          <div className="mt-2 text-sm text-text-secondary">
+            Next auto-calculate:{' '}
+            {!hasEligibleLiveMatches ? (
+              <span className="text-warning-text font-medium">Paused (no live match with scorecard URL)</span>
+            ) : (
+              <span className="text-accent font-medium">{formatRemaining(remainingMs)}</span>
+            )}
+          </div>
         </div>
 
         <Card variant="outlined" padding="none">

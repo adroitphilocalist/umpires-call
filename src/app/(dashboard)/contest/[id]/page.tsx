@@ -296,6 +296,20 @@ export default function ContestDetailPage() {
     }
   }, [user, contestId, contest?.matchId]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !user || !contestId) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      fetchContestDetails();
+      checkUserTeam();
+      fetchAllTeams();
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, [isAuthenticated, user, contestId, contest?.matchId]);
+
   const fetchContestDetails = async () => {
     try {
       const res = await fetch(`/api/contests/${contestId}`);
@@ -337,6 +351,9 @@ export default function ContestDetailPage() {
         teamsRes.json(),
         playersRes.json(),
       ]);
+      // console.log('Scores Data:', scoresData);
+      // console.log('Teams Data:', teamsData);
+      // console.log('Players Data:', playersData);
 
       if (!scoresData.success || !teamsData.success || !playersData.players) {
         return;
@@ -441,6 +458,7 @@ export default function ContestDetailPage() {
     try {
       const res = await fetch(`/api/scores?matchId=${matchId}`);
       const data = await res.json();
+      console.log(data)
 
       if (data.success && data.scores) {
         const scoresMap: Record<string, number> = {};
@@ -455,6 +473,7 @@ export default function ContestDetailPage() {
             };
           }
         });
+        console.log('Scores Map:', scoresMap);  
         setPlayerScores(scoresMap);
         setPlayerScoreDetails(scoreDetailsMap);
 
