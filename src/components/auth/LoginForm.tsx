@@ -232,7 +232,7 @@ function LoginFormContent() {
               <div>
                 <Input
                   type="text"
-                  label="Email or Username"
+                  label="Registered Email - ID"
                   placeholder="name@example.com or user123"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
