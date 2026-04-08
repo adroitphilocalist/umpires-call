@@ -495,7 +495,7 @@ export default function MyTeamPage() {
                   </p>
                 )}
                 {selectedPlayers.length === MAX_PLAYERS && (!captainId || !viceCaptainId) && !isMatchStarted && (
-                  <p className="text-sm text-text-secondary text-center text-warning-text">
+                  <p className="text-sm text-center text-warning-text">
                     Select captain and vice-captain
                   </p>
                 )}
