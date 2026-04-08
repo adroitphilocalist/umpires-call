@@ -4,7 +4,8 @@ export interface ITeamPlayer {
   playerId: mongoose.Types.ObjectId;
   name: string;
   role: 'batsman' | 'bowler' | 'all-rounder' | 'wicket-keeper';
-  creditCost: number;
+  externalId: string;
+  creditCost?: number;
   image?: string;
 }
 
@@ -36,7 +37,8 @@ const TeamSchema = new Schema<ITeam>(
           enum: ['batsman', 'bowler', 'all-rounder', 'wicket-keeper'],
           required: true,
         },
-        creditCost: { type: Number, required: true },
+        externalId: { type: String, required: true },
+        creditCost: { type: Number, default: 0 },
         image: String,
       },
     ],

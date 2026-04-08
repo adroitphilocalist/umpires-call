@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Contest, IContest } from '@/models/Contest';
+import { Match } from '@/models/Match';
 
 export async function GET(
   request: Request,
@@ -9,9 +10,7 @@ export async function GET(
   try {
     await dbConnect();
 
-    const contest = await Contest.findById(params.id)
-      .populate('matchId')
-      .lean<IContest & { matchId?: any }>();
+    const contest = await Contest.findById(params.id).lean<IContest & { matchId?: any }>();
 
     if (!contest) {
       return NextResponse.json(
@@ -20,16 +19,21 @@ export async function GET(
       );
     }
 
+    const rawMatchId = contest.matchId ? String(contest.matchId) : undefined;
+    const match = rawMatchId ? await Match.findById(rawMatchId).lean<any>() : null;
+
     return NextResponse.json({
       success: true,
       contest: {
         ...contest,
         _id: String(contest._id),
-        matchId: contest.matchId?._id?.toString(),
-        match: contest.matchId ? {
-          ...contest.matchId,
-          _id: String(contest.matchId._id),
-        } : undefined,
+        matchId: rawMatchId,
+        match: match
+          ? {
+              ...match,
+              _id: String(match._id),
+            }
+          : undefined,
         participantCount: contest.participants?.length || 0,
         inviteCode: contest.inviteCode,
       },
