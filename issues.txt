@@ -1,6 +1,5 @@
 #1 Middleware Issue allowing players to ricochet back to edit team lineup even after Match Start
 #2 Create Team button should be disabled once match starts
-#3 Player Points updation not handled properly
 #4 Users shoud be able to login using Username
 #5 Display Username in the profile
 #6 Users may be able to create multiple Teams for the same match

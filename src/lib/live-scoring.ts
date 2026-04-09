@@ -24,28 +24,35 @@ export async function updatePlayerScore(
       continue;
     }
 
-    const existingScore = await MatchScore.findOne({
-      matchId: matchObjectId,
-      playerId: player._id,
-    });
-
-    if (existingScore) {
-      existingScore.points = pp.points;
-      existingScore.stats = pp.stats;
-      existingScore.lastUpdated = new Date();
-      await existingScore.save();
-      updatedScores.push(existingScore);
-    } else {
-      const newScore = new MatchScore({
+    // Keep one score per (matchId, externalId) and always attach current playerId.
+    const scoreDoc = await MatchScore.findOneAndUpdate(
+      {
         matchId: matchObjectId,
-        playerId: player._id,
         externalId: pp.externalId,
-        points: pp.points,
-        stats: pp.stats,
-        lastUpdated: new Date(),
+      },
+      {
+        $set: {
+          playerId: player._id,
+          points: pp.points,
+          stats: pp.stats,
+          lastUpdated: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    if (scoreDoc) {
+      // Remove any legacy duplicates for this externalId in this match.
+      await MatchScore.deleteMany({
+        matchId: matchObjectId,
+        externalId: pp.externalId,
+        _id: { $ne: scoreDoc._id },
       });
-      await newScore.save();
-      updatedScores.push(newScore);
+      updatedScores.push(scoreDoc);
     }
   }
 

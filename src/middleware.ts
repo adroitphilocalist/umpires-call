@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const ADMIN_PHONE = '+916291299136';
+const ADMIN_PHONE = '+916291299136' ;
 
 const PUBLIC_ROUTES = [
   '/',

@@ -74,6 +74,11 @@ function parseOvers(overs: string | number): number {
   return parseFloat(overs) || 0;
 }
 
+function safeNum(value: unknown): number {
+  const n = typeof value === 'string' ? Number(value) : (value as number);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function calculateBattingPoints(
   runs: number,
   balls: number,
@@ -435,11 +440,11 @@ export async function POST(request: Request) {
 
         const externalId = String(bowler.bowlerId);
         const overs = parseOvers(bowler.overs || '0');
-        const wickets = bowler.wickets || 0;
-        const economy = bowler.economy || 0;
-        const maidens = bowler.maidens || 0;
-        const dots = bowler.dots || 0;
-        const runs = bowler.runs || 0;
+        const wickets = safeNum(bowler.wickets);
+        const economy = safeNum(bowler.economy);
+        const maidens = safeNum(bowler.maidens);
+        const dots = safeNum(bowler.dots);
+        const runs = safeNum(bowler.runs);
 
         // Determine wicket type for bonus (assume regular wickets, not run outs)
         // In the API, we need to track if bowler got LBW/Bowled
@@ -466,7 +471,7 @@ export async function POST(request: Request) {
         existing.stats.overs += overs;
         existing.stats.maiden += maidens;
         existing.stats.dots += dots;
-        existing.stats.economy = economy > 0 ? economy : (runs / overs);
+        existing.stats.economy = economy > 0 ? economy : overs > 0 ? runs / overs : 0;
         existing.points += bowlingPoints;
 
         // Check if bowler is in playing XI (bowlers who bowled are in playing XI)
