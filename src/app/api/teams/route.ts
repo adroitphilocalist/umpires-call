@@ -5,6 +5,7 @@ import { User } from '@/models/User';
 import { Contest } from '@/models/Contest';
 import { Match } from '@/models/Match';
 import { verifyToken } from '@/lib/jwt';
+import { isTeamSelectionLocked } from '@/lib/match-lock';
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
@@ -143,8 +144,46 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await dbConnect();
+
+    const requesterUserId = getRequesterUserId(request);
+    if (!requesterUserId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     
     const data = await request.json();
+
+    if (!data?.userId || requesterUserId !== String(data.userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized team create attempt' },
+        { status: 403 }
+      );
+    }
+
+    const contest = await Contest.findById(data.contestId).lean() as any;
+    if (!contest) {
+      return NextResponse.json(
+        { success: false, error: 'Contest not found' },
+        { status: 404 }
+      );
+    }
+
+    const match = contest.matchId ? await Match.findById(contest.matchId).lean() as any : null;
+    if (!match?.date) {
+      return NextResponse.json(
+        { success: false, error: 'Match not found for contest' },
+        { status: 404 }
+      );
+    }
+
+    if (isTeamSelectionLocked(new Date(match.date), match.status)) {
+      return NextResponse.json(
+        { success: false, error: 'Team creation is locked because the match has started' },
+        { status: 403 }
+      );
+    }
     
     const existingTeam = await Team.findOne({
       userId: data.userId,
