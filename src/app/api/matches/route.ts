@@ -94,7 +94,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const maxMatch = await Match.findOne().sort({ matchNumber: -1 }).select('matchNumber').lean();
+    const maxMatch = await Match.findOne()
+      .sort({ matchNumber: -1 })
+      .select('matchNumber')
+      .lean<{ matchNumber?: number } | null>();
     const maxExistingMatchNumber = maxMatch?.matchNumber || 70;
     const computedMatchNumber =
       typeof data.matchNumber === 'number' && data.matchNumber > 70
