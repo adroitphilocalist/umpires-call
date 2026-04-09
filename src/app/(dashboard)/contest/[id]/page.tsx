@@ -594,9 +594,9 @@ export default function ContestDetailPage() {
           <span>Back</span>
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3 flex flex-col gap-6">
+            <Card className="order-2 opacity-90 hover:opacity-100 transition-opacity">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -656,7 +656,7 @@ export default function ContestDetailPage() {
             </Card>
 
             {match && (
-              <Card>
+              <Card className="order-3 opacity-85 hover:opacity-100 transition-opacity">
                 <CardHeader>
                   <CardTitle>Match Details</CardTitle>
                 </CardHeader>
@@ -699,7 +699,7 @@ export default function ContestDetailPage() {
             )}
 
             {contest.inviteCode && (
-              <Card>
+              <Card className="order-4 opacity-85 hover:opacity-100 transition-opacity">
                 <CardHeader>
                   <CardTitle>Invite Code</CardTitle>
                   <CardDescription>Share this code with friends to invite them</CardDescription>
@@ -723,7 +723,8 @@ export default function ContestDetailPage() {
               </Card>
             )}
 
-            <Card>
+            <Card className="order-1 relative overflow-hidden border border-accent/40 shadow-xl shadow-accent/10">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent pointer-events-none" />
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -942,7 +943,7 @@ export default function ContestDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 opacity-90 hover:opacity-100 transition-opacity">
               <CardHeader>
                 <CardTitle>Contest Status</CardTitle>
               </CardHeader>
@@ -997,31 +998,6 @@ export default function ContestDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>How to Play</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-3 text-sm text-text-secondary">
-                  <li className="flex gap-2">
-                    <span className="text-accent font-bold">1.</span>
-                    <span>Join the contest</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-accent font-bold">2.</span>
-                    <span>Create your team of 11 players</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-accent font-bold">3.</span>
-                    <span>Select captain and vice-captain</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-accent font-bold">4.</span>
-                    <span>Earn points based on player performance</span>
-                  </li>
-                </ol>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
