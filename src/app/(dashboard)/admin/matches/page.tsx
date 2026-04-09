@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar, Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, PageLoader } from '@/components/ui';
 import { Match } from '@/types';
-import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2 } from 'lucide-react';
+import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2, PlusCircle } from 'lucide-react';
 
 interface MatchWithScores extends Match {
   hasScores?: boolean;
@@ -16,12 +16,29 @@ export default function AdminMatchesPage() {
   const router = useRouter();
   const [matches, setMatches] = useState<MatchWithScores[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '' });
+  const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '', startTime: '' });
+  const [newMatchForm, setNewMatchForm] = useState({
+    team1Name: '',
+    team1ShortName: '',
+    team2Name: '',
+    team2ShortName: '',
+    startTime: '',
+    venue: '',
+  });
   const [saving, setSaving] = useState<string | null>(null);
   const [calculating, setCalculating] = useState<string | null>(null);
+  const [creatingMatch, setCreatingMatch] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [autoCalcMinutes, setAutoCalcMinutes] = useState(1);
   const [nextAutoRunAt, setNextAutoRunAt] = useState<number | null>(null);
   const [nowTs, setNowTs] = useState<number>(Date.now());
+
+  const formatDateTimeLocal = (value: string | Date) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -91,12 +108,13 @@ export default function AdminMatchesPage() {
     setFormData({
       scorecardUrl: match.scorecardUrl || '',
       cricbuzzId: match.cricbuzzId || '',
+      startTime: formatDateTimeLocal(match.date),
     });
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setFormData({ scorecardUrl: '', cricbuzzId: '' });
+    setFormData({ scorecardUrl: '', cricbuzzId: '', startTime: '' });
   };
 
   const saveScorecard = async (matchId: string) => {
@@ -109,6 +127,7 @@ export default function AdminMatchesPage() {
           matchId,
           scorecardUrl: formData.scorecardUrl,
           cricbuzzId: formData.cricbuzzId,
+          date: formData.startTime ? new Date(formData.startTime).toISOString() : undefined,
         }),
       });
       const data = await res.json();
@@ -122,6 +141,68 @@ export default function AdminMatchesPage() {
       console.error('Error saving scorecard:', error);
     } finally {
       setSaving(null);
+    }
+  };
+
+  const createTestMatch = async () => {
+    setCreateError(null);
+
+    if (!newMatchForm.team1Name.trim() || !newMatchForm.team2Name.trim() || !newMatchForm.startTime) {
+      setCreateError('Team 1, Team 2, and Start Time are required.');
+      return;
+    }
+
+    const parsed = new Date(newMatchForm.startTime);
+    if (Number.isNaN(parsed.getTime())) {
+      setCreateError('Invalid start time.');
+      return;
+    }
+
+    setCreatingMatch(true);
+    try {
+      const res = await fetch('/api/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team1: {
+            name: newMatchForm.team1Name.trim(),
+            shortName: newMatchForm.team1ShortName.trim() || undefined,
+          },
+          team2: {
+            name: newMatchForm.team2Name.trim(),
+            shortName: newMatchForm.team2ShortName.trim() || undefined,
+          },
+          date: parsed.toISOString(),
+          venue: newMatchForm.venue.trim() || undefined,
+          status: 'upcoming',
+          format: 'T20',
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        setCreateError(data.error || 'Failed to create test match');
+        return;
+      }
+
+      setMatches((prev) => {
+        const next = [...prev, data.match as MatchWithScores];
+        next.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return next;
+      });
+
+      setNewMatchForm({
+        team1Name: '',
+        team1ShortName: '',
+        team2Name: '',
+        team2ShortName: '',
+        startTime: '',
+        venue: '',
+      });
+    } catch (error) {
+      setCreateError('Failed to create test match');
+    } finally {
+      setCreatingMatch(false);
     }
   };
 
@@ -209,7 +290,7 @@ export default function AdminMatchesPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-[92rem] mx-auto px-2 sm:px-3 lg:px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-text-primary font-heading">
             Manage Match Scorecards
@@ -238,13 +319,70 @@ export default function AdminMatchesPage() {
           </div>
         </div>
 
+        <Card className="mb-6 border-primary/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PlusCircle size={18} className="text-accent" />
+              Create Test Match (After Match 70)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+              <Input
+                label="Team 1 Name"
+                value={newMatchForm.team1Name}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, team1Name: e.target.value }))}
+                placeholder="Chennai Super Kings"
+              />
+              <Input
+                label="Team 1 Short"
+                value={newMatchForm.team1ShortName}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, team1ShortName: e.target.value }))}
+                placeholder="CSK"
+              />
+              <Input
+                label="Team 2 Name"
+                value={newMatchForm.team2Name}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, team2Name: e.target.value }))}
+                placeholder="Mumbai Indians"
+              />
+              <Input
+                label="Team 2 Short"
+                value={newMatchForm.team2ShortName}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, team2ShortName: e.target.value }))}
+                placeholder="MI"
+              />
+              <Input
+                label="Start Time"
+                type="datetime-local"
+                value={newMatchForm.startTime}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, startTime: e.target.value }))}
+              />
+              <Input
+                label="Venue (optional)"
+                value={newMatchForm.venue}
+                onChange={(e) => setNewMatchForm((p) => ({ ...p, venue: e.target.value }))}
+                placeholder="Can be left empty"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button onClick={createTestMatch} isLoading={creatingMatch}>
+                <PlusCircle size={14} className="mr-1" />
+                Create Test Match
+              </Button>
+              {createError && <p className="text-sm text-danger-text">{createError}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card variant="outlined" padding="none">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-surface-light border-b border-primary/30">
                 <tr>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Match</th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Date</th>
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Start Time</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Status</th>
                     <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Scorecard URL</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Cricbuzz ID</th>
@@ -267,16 +405,27 @@ export default function AdminMatchesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-sm text-text-secondary">
-                        <Calendar size={14} className="text-accent" />
-                        <span>
-                          {new Date(match.date).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
+                      {editingId === match._id ? (
+                        <Input
+                          type="datetime-local"
+                          value={formData.startTime}
+                          onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                          className="text-sm"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-text-secondary">
+                          <Calendar size={14} className="text-accent" />
+                          <span>
+                            {new Date(match.date).toLocaleString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={getStatusVariant(match.status) as 'default' | 'success' | 'warning' | 'danger' | 'info'}>

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     await dbConnect();
 
     const data = await request.json();
-    const { matchId, scorecardUrl, cricbuzzId } = data;
+    const { matchId, scorecardUrl, cricbuzzId, date } = data;
 
     if (!matchId) {
       return NextResponse.json(
@@ -43,12 +43,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const updateFields: { [key: string]: string } = {};
+    const updateFields: { [key: string]: string | Date } = {};
     if (scorecardUrl !== undefined) {
       updateFields.scorecardUrl = scorecardUrl;
     }
     if (cricbuzzId !== undefined) {
       updateFields.cricbuzzId = cricbuzzId;
+    }
+    if (date !== undefined) {
+      const parsedDate = new Date(date);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid date format' },
+          { status: 400 }
+        );
+      }
+      updateFields.date = parsedDate;
     }
 
     if (Object.keys(updateFields).length === 0) {

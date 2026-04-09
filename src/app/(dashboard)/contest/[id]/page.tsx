@@ -86,6 +86,9 @@ const toNum = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+const getNormalizedMatchTime = (date: Date) => new Date(date.getTime() - IST_OFFSET_MS);
+
 const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: number): PlayerBreakdown[] => {
   if (!stats) {
     return [{ category: 'Other', description: 'Base fantasy points', points: toNum(totalPoints) }];
@@ -556,6 +559,8 @@ export default function ContestDetailPage() {
   const hasJoined = contest?.participants?.includes(user?._id || '') || !!userTeam;
   const match = contest?.match as Match | undefined;
   const matchDate = match?.date ? new Date(match.date) : null;
+  const normalizedMatchTime = matchDate ? getNormalizedMatchTime(matchDate) : null;
+  const isMatchStarted = normalizedMatchTime ? new Date() >= normalizedMatchTime : false;
 
   if (authLoading || isLoading) {
     return <PageLoader />;
@@ -963,17 +968,23 @@ export default function ContestDetailPage() {
                         </Button>
                       </Link>
                     ) : (
-                      <Link href={`/my-team/${contestId}`}>
-                        <Button className="w-full">
-                          Create Team
-                          <ArrowRight size={18} className="ml-2" />
+                      isMatchStarted ? (
+                        <Button className="w-full" disabled>
+                          Team Creation Locked
                         </Button>
-                      </Link>
+                      ) : (
+                        <Link href={`/my-team/${contestId}`}>
+                          <Button className="w-full">
+                            Create Team
+                            <ArrowRight size={18} className="ml-2" />
+                          </Button>
+                        </Link>
+                      )
                     )}
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {contest.status === 'open' ? (
+                    {contest.status === 'open' && !isMatchStarted ? (
                       <Button
                         className="w-full"
                         onClick={handleJoin}
@@ -984,7 +995,7 @@ export default function ContestDetailPage() {
                       </Button>
                     ) : (
                       <Button className="w-full" disabled>
-                        Contest {contest.status}
+                        {isMatchStarted ? 'Match Started' : `Contest ${contest.status}`}
                       </Button>
                     )}
 

@@ -78,17 +78,45 @@ export async function POST(request: Request) {
     await dbConnect();
     
     const data = await request.json();
+
+    if (!data?.team1?.name || !data?.team2?.name || !data?.date) {
+      return NextResponse.json(
+        { success: false, error: 'team1.name, team2.name and date are required' },
+        { status: 400 }
+      );
+    }
+
+    const parsedDate = new Date(data.date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid match start date' },
+        { status: 400 }
+      );
+    }
+
+    const maxMatch = await Match.findOne().sort({ matchNumber: -1 }).select('matchNumber').lean();
+    const maxExistingMatchNumber = maxMatch?.matchNumber || 70;
+    const computedMatchNumber =
+      typeof data.matchNumber === 'number' && data.matchNumber > 70
+        ? data.matchNumber
+        : Math.max(70, maxExistingMatchNumber) + 1;
     
     const match = await Match.create({
-      team1: data.team1,
-      team2: data.team2,
-      venue: data.venue,
-      date: data.date,
+      team1: {
+        name: data.team1.name,
+        shortName: data.team1.shortName || data.team1.name.slice(0, 3).toUpperCase(),
+      },
+      team2: {
+        name: data.team2.name,
+        shortName: data.team2.shortName || data.team2.name.slice(0, 3).toUpperCase(),
+      },
+      venue: data.venue || 'TBD',
+      date: parsedDate,
       status: data.status || 'upcoming',
       format: data.format || 'T20',
-      matchNumber: data.matchNumber,
-      cricbuzzId: data.cricbuzzId,
-      scorecardUrl: data.scorecardUrl,
+      matchNumber: computedMatchNumber,
+      cricbuzzId: data.cricbuzzId || undefined,
+      scorecardUrl: data.scorecardUrl || undefined,
     });
     
     return NextResponse.json({
