@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { Match } from '@/models/Match';
+import { getMatchLifecycleStatus } from '@/lib/match-lock';
 
 function isAuthorized(request: Request): boolean {
   const expectedToken = process.env.AUTO_CALC_SECRET;
@@ -21,12 +22,16 @@ export async function POST(request: Request) {
 
     await dbConnect();
 
-    const liveMatches = await Match.find({
-      status: 'live',
+    const matches = await Match.find({
       scorecardUrl: { $exists: true, $ne: '' },
     })
-      .select('_id scorecardUrl')
-      .lean<Array<{ _id: { toString: () => string }; scorecardUrl: string }>>();
+      .select('_id scorecardUrl date status')
+      .lean<Array<{ _id: { toString: () => string }; scorecardUrl: string; date?: Date; status?: string }>>();
+
+    const liveMatches = matches.filter((match) => {
+      if (!match.date) return false;
+      return getMatchLifecycleStatus(new Date(match.date), match.status) === 'live';
+    });
 
     if (liveMatches.length === 0) {
       return NextResponse.json({
