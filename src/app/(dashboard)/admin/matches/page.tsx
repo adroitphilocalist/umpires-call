@@ -14,6 +14,7 @@ interface MatchWithScores extends Match {
 export default function AdminMatchesPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
+  console.log("hi")
   const [matches, setMatches] = useState<MatchWithScores[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ scorecardUrl: '', cricbuzzId: '', startTime: '' });
