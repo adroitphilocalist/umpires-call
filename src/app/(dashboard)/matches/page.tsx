@@ -48,7 +48,7 @@ export default function MatchesPage() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      timeZone: 'UTC',
+      timeZone: 'Asia/Kolkata',
     });
   };
 
@@ -57,7 +57,7 @@ export default function MatchesPage() {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-      timeZone: 'UTC',
+      timeZone: 'Asia/Kolkata',
     });
   };
 

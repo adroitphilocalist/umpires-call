@@ -1,11 +1,6 @@
 export type MatchLifecycleStatus = 'upcoming' | 'live' | 'completed';
 
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-
-export function getNormalizedMatchTime(matchDate: Date): Date {
-  return new Date(matchDate.getTime() - IST_OFFSET_MS);
-}
 
 export function getMatchLifecycleStatus(matchDate: Date, dbStatus?: string): MatchLifecycleStatus {
   if (dbStatus === 'completed') {
@@ -13,7 +8,7 @@ export function getMatchLifecycleStatus(matchDate: Date, dbStatus?: string): Mat
   }
 
   const now = new Date();
-  const normalizedMatchTime = getNormalizedMatchTime(new Date(matchDate));
+  const normalizedMatchTime = new Date(matchDate);
 
   if (now < normalizedMatchTime) {
     return 'upcoming';

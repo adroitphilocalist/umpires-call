@@ -11,7 +11,7 @@ export function formatDate(date: Date | string): string {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Kolkata',
   });
 }
 
@@ -21,7 +21,7 @@ export function formatTime(date: Date | string): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    timeZone: 'UTC',
+    timeZone: 'Asia/Kolkata',
   });
 }
 

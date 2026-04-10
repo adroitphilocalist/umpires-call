@@ -167,7 +167,7 @@ export default function CreateContestPage() {
                                   day: 'numeric',
                                   month: 'short',
                                   year: 'numeric',
-                                  timeZone: 'UTC',
+                                  timeZone: 'Asia/Kolkata',
                                 })}
                               </span>
                             </div>
@@ -178,7 +178,7 @@ export default function CreateContestPage() {
                                   hour: '2-digit',
                                   minute: '2-digit',
                                   hour12: true,
-                                  timeZone: 'UTC',
+                                  timeZone: 'Asia/Kolkata',
                                 })}
                               </span>
                             </div>
