@@ -167,7 +167,7 @@ export default function ProfilePage() {
                     <div>
                       <h4 className="font-medium text-text-primary">{contest.name}</h4>
                       <p className="text-sm text-text-secondary">
-                        {new Date(contest.date).toLocaleDateString()}
+                        {new Date(contest.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                       </p>
                     </div>
                     <div className="text-right">

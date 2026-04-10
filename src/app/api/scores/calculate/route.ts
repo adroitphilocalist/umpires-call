@@ -254,10 +254,37 @@ async function fetchInningsOverData(matchCricbuzzId: string, innings: number): P
   const seenOvers = new Set<string>();
 
   while (url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed API: ${url}`);
+    const readPage = async (): Promise<OverByOverResponse | null> => {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          Accept: 'application/json',
+        },
+      });
 
-    const data: OverByOverResponse = await res.json();
+      if (!res.ok) {
+        throw new Error(`Failed API: ${url} (${res.status})`);
+      }
+
+      const raw = await res.text();
+      if (!raw || !raw.trim()) {
+        return null;
+      }
+
+      return JSON.parse(raw) as OverByOverResponse;
+    };
+
+    let data: OverByOverResponse | null = null;
+    try {
+      data = await readPage();
+    } catch {
+      // Retry once to handle intermittent truncated/empty responses.
+      data = await readPage();
+    }
+
+    if (!data) {
+      break;
+    }
 
     for (const over of data.paginatedData || []) {
       const key = `${innings}-${over.overs}`;

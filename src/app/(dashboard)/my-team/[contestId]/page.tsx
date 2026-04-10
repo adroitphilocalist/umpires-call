@@ -17,9 +17,7 @@ interface SelectedPlayer {
 
 const MAX_PLAYERS = 11;
 const MAX_CREDITS = 100;
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-
-const getNormalizedMatchTime = (date: Date) => new Date(date.getTime() - IST_OFFSET_MS);
+const getNormalizedMatchTime = (date: Date) => new Date(date);
 
 type RoleFilter = 'all' | 'batsman' | 'bowler' | 'all-rounder' | 'wicket-keeper';
 

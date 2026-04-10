@@ -86,8 +86,7 @@ const toNum = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-const getNormalizedMatchTime = (date: Date) => new Date(date.getTime() - IST_OFFSET_MS);
+const getNormalizedMatchTime = (date: Date) => new Date(date);
 
 const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: number): PlayerBreakdown[] => {
   if (!stats) {
