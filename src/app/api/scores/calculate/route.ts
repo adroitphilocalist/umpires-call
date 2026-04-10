@@ -620,14 +620,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Add Playing XI bonus (+4) and Substitute bonus (+4)
+    // Add Playing XI bonus (+4)
     const playerEntries = Array.from(playerPointsMap.entries());
     for (const [externalId, playerData] of playerEntries) {
       if (playingXISet.has(externalId) || playerData.stats.playingXI === 1) {
         playerData.points += 4; // In announced lineups
-      }
-      if (playerData.stats.substitute === 1) {
-        playerData.points += 4; // Concussion, X-Factor, or Impact Player
       }
     }
 
