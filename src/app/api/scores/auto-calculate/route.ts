@@ -55,7 +55,7 @@ async function runAutoCalculate(request: Request) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             cache: 'no-store',
-            signal: AbortSignal.timeout(20000),
+            signal: AbortSignal.timeout(28000),
             body: JSON.stringify({
               matchId: match._id.toString(),
               scorecardUrl: match.scorecardUrl,
