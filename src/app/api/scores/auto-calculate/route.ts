@@ -11,10 +11,12 @@ function isAuthorized(request: Request): boolean {
 
   const authHeader = request.headers.get('authorization') || '';
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  return bearer === expectedToken;
+  const url = new URL(request.url);
+  const tokenFromQuery = url.searchParams.get('secret') || '';
+  return bearer === expectedToken || tokenFromQuery === expectedToken;
 }
 
-export async function POST(request: Request) {
+async function runAutoCalculate(request: Request) {
   try {
     if (!isAuthorized(request)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
           const res = await fetch(`${origin}/api/scores/calculate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(20000),
             body: JSON.stringify({
               matchId: match._id.toString(),
               scorecardUrl: match.scorecardUrl,
@@ -90,4 +94,13 @@ export async function POST(request: Request) {
     console.error('Error in auto-calculate:', error);
     return NextResponse.json({ success: false, error: 'Failed to run auto-calculate' }, { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return runAutoCalculate(request);
+}
+
+export async function GET(request: Request) {
+  // Keep GET usable for simple browser checks and cron providers configured with GET.
+  return runAutoCalculate(request);
 }
