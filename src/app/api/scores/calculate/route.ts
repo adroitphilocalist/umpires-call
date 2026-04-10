@@ -63,6 +63,20 @@ interface CricbuzzScorecard {
   }>;
 }
 
+interface OverByOverData {
+  overs: number;
+  bowlIds: number[];
+  bowlNames: string[];
+  ovrSummary: string;
+}
+
+interface OverByOverResponse {
+  paginatedData: OverByOverData[];
+  nextPaginationURL: string;
+}
+
+const CRICBUZZ_BASE_URL = 'https://www.cricbuzz.com';
+
 function parseOvers(overs: string | number): number {
   if (typeof overs === 'number') return overs;
   if (!overs) return 0;
@@ -223,6 +237,72 @@ function calculateFieldingPoints(
   return points;
 }
 
+function countDotBalls(summary: string): number {
+  let count = 0;
+  const balls = summary.trim().split(/\s+/);
+
+  for (const ball of balls) {
+    if (ball === '0') count++;
+  }
+
+  return count;
+}
+
+async function fetchInningsOverData(matchCricbuzzId: string, innings: number): Promise<OverByOverData[]> {
+  let url = `${CRICBUZZ_BASE_URL}/api/mcenter/over-by-over/${matchCricbuzzId}/${innings}`;
+  const allOvers: OverByOverData[] = [];
+  const seenOvers = new Set<string>();
+
+  while (url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed API: ${url}`);
+
+    const data: OverByOverResponse = await res.json();
+
+    for (const over of data.paginatedData || []) {
+      const key = `${innings}-${over.overs}`;
+      if (seenOvers.has(key)) continue;
+
+      seenOvers.add(key);
+      allOvers.push(over);
+    }
+
+    if (!data.nextPaginationURL) break;
+    url = CRICBUZZ_BASE_URL + data.nextPaginationURL;
+  }
+
+  return allOvers;
+}
+
+async function getBowlerDotBalls(matchCricbuzzId: string): Promise<Record<number, number> | null> {
+  try {
+    const bowlerDotMap = new Map<number, number>();
+
+    for (let innings = 1; innings <= 2; innings++) {
+      const overs = await fetchInningsOverData(matchCricbuzzId, innings);
+
+      for (const over of overs) {
+        if (!over.bowlIds || over.bowlIds.length === 0) continue;
+
+        const bowlerId = over.bowlIds[0];
+        const dotBalls = countDotBalls(over.ovrSummary || '');
+
+        bowlerDotMap.set(bowlerId, (bowlerDotMap.get(bowlerId) || 0) + dotBalls);
+      }
+    }
+
+    const result: Record<number, number> = {};
+    for (const [bowlerId, dots] of bowlerDotMap.entries()) {
+      result[bowlerId] = dots;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching over-by-over dot balls:', error);
+    return null;
+  }
+}
+
 async function fetchScorecard(scorecardUrl: string): Promise<CricbuzzScorecard | null> {
   try {
     const response = await fetch(scorecardUrl, {
@@ -287,6 +367,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Use over-by-over dots as source of truth when cricbuzzId is available.
+    const correctedDotBalls = match.cricbuzzId
+      ? await getBowlerDotBalls(String(match.cricbuzzId))
+      : null;
+    const correctedDotsApplied: Map<string, number> = new Map();
+
     const scorecardData = await fetchScorecard(scorecardUrl);
     if (!scorecardData || !scorecardData.scoreCard) {
       return NextResponse.json(
@@ -324,7 +410,6 @@ export async function POST(request: Request) {
         const balls = batsman.balls || 0;
         const fours = batsman.fours || 0;
         const sixes = batsman.sixes || 0;
-        const dots = batsman.dots || 0;
         const strikeRate = batsman.strikeRate || 0;
         const wicketCode = batsman.wicketCode || '';
         const outDesc = batsman.outDesc || '';
@@ -350,7 +435,6 @@ export async function POST(request: Request) {
 
         existing.stats.runs += runs;
         existing.stats.balls += balls;
-        existing.stats.dots += dots;
         existing.stats.fours += fours;
         existing.stats.sixes += sixes;
         existing.stats.strikeRate = runs && balls ? (runs / balls) * 100 : 0;
@@ -443,7 +527,16 @@ export async function POST(request: Request) {
         const wickets = safeNum(bowler.wickets);
         const economy = safeNum(bowler.economy);
         const maidens = safeNum(bowler.maidens);
-        const dots = safeNum(bowler.dots);
+        const scorecardDots = safeNum(bowler.dots);
+        let dots = scorecardDots;
+        const correctedTotalDots = correctedDotBalls?.[Number(externalId)];
+        if (typeof correctedTotalDots === 'number') {
+          const alreadyApplied = correctedDotsApplied.get(externalId) || 0;
+          dots = Math.max(0, correctedTotalDots - alreadyApplied);
+          correctedDotsApplied.set(externalId, alreadyApplied + dots);
+        }
+        // Count wicket deliveries as dot balls as requested.
+        dots += wickets;
         const runs = safeNum(bowler.runs);
 
         // Determine wicket type for bonus (assume regular wickets, not run outs)

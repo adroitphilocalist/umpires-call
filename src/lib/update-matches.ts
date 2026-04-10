@@ -28,6 +28,25 @@ interface MergedMatch {
   id: number;
 }
 
+function parseIstDateToUtc(dateStr: string): Date {
+  // merged.json values are intended as IST clock time; ignore the input offset token.
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!match) {
+    return new Date(dateStr);
+  }
+
+  const [, y, m, d, hh, mm, ss] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+  const hour = Number(hh);
+  const minute = Number(mm);
+  const second = Number(ss);
+
+  // IST = UTC+05:30, so subtract 5h30m to store the correct UTC instant.
+  return new Date(Date.UTC(year, month - 1, day, hour - 5, minute - 30, second));
+}
+
 export async function updateMatchesFromMerged() {
   try {
     await dbConnect();
@@ -53,7 +72,7 @@ export async function updateMatchesFromMerged() {
         team1: { name: m.team1, shortName: team1Short },
         team2: { name: m.team2, shortName: team2Short },
         venue: m.venue,
-        date: new Date(m.date),
+        date: parseIstDateToUtc(m.date),
         cricbuzzId: String(m.id),
         scorecardUrl: m.url,
       };
