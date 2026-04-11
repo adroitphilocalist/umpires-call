@@ -242,7 +242,7 @@ function countDotBalls(summary: string): number {
   const balls = summary.trim().split(/\s+/);
 
   for (const ball of balls) {
-    if (ball === '0') count++;
+    if (ball === '0'|| ball.startsWith("L")) count++;
   }
 
   return count;
@@ -479,9 +479,8 @@ export async function POST(request: Request) {
         existing.points += battingPoints;
 
         // Track playing XI status
-        // If playingXIChange is "IN" and inMatchChange is "MOUT", they're a substitute
-        const isSubstitute = playingXIChange === 'IN' || inMatchChange.includes('MOUT');
-        if (!isSubstitute && balls > 0) {
+        // Any player who participated should receive Playing XI +4.
+        if (balls > 0 || runs > 0 || !!playingXIChange || !!inMatchChange) {
           existing.stats.playingXI = 1;
           playingXISet.add(externalId);
         }
