@@ -420,6 +420,9 @@ export async function POST(request: Request) {
     }
     const fieldingMap: Map<string, FieldingContribution> = new Map();
 
+    // Track LBW/Bowled dismissals by bowler for +8 bowling bonus.
+    const lbwBowledByBowler: Map<string, number> = new Map();
+
     // Track players who appeared in playing XI (not substitutes)
     const playingXISet: Set<string> = new Set();
 
@@ -442,6 +445,14 @@ export async function POST(request: Request) {
         const outDesc = batsman.outDesc || '';
         const inMatchChange = batsman.inMatchChange || '';
         const playingXIChange = batsman.playingXIChange || '';
+
+        if ((wicketCode === 'LBW' || wicketCode === 'BOWLED') && batsman.bowlerId) {
+          const bowlerExternalId = String(batsman.bowlerId);
+          lbwBowledByBowler.set(
+            bowlerExternalId,
+            (lbwBowledByBowler.get(bowlerExternalId) || 0) + 1
+          );
+        }
 
         // Calculate batting points
         const battingPoints = calculateBattingPoints(
@@ -467,20 +478,12 @@ export async function POST(request: Request) {
         existing.stats.strikeRate = runs && balls ? (runs / balls) * 100 : 0;
         existing.points += battingPoints;
 
-        // Track LBW/Bowled dismissals for bowling bonus
-        if (wicketCode === 'LBW' || wicketCode === 'BOWLED') {
-          existing.stats.lbwBowled += 1;
-        }
-
         // Track playing XI status
         // If playingXIChange is "IN" and inMatchChange is "MOUT", they're a substitute
         const isSubstitute = playingXIChange === 'IN' || inMatchChange.includes('MOUT');
         if (!isSubstitute && balls > 0) {
           existing.stats.playingXI = 1;
           playingXISet.add(externalId);
-        }
-        if (isSubstitute) {
-          existing.stats.substitute = 1;
         }
 
         // Track fielding contributions
@@ -593,6 +596,13 @@ export async function POST(request: Request) {
         existing.stats.dots += dots;
         existing.stats.economy = economy > 0 ? economy : overs > 0 ? runs / overs : 0;
         existing.points += bowlingPoints;
+
+        const lbwBowledCount = lbwBowledByBowler.get(externalId) || 0;
+        if (lbwBowledCount > 0) {
+          existing.stats.lbwBowled += lbwBowledCount;
+          existing.points += lbwBowledCount * 8;
+          lbwBowledByBowler.set(externalId, 0);
+        }
 
         // Check if bowler is in playing XI (bowlers who bowled are in playing XI)
         existing.stats.playingXI = 1;

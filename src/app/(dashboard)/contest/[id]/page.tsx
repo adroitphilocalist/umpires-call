@@ -19,6 +19,7 @@ import {
 import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock, Sparkles } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
+import { LiveScorecardPanel, LiveScorecardData } from '@/components/live/LiveScorecardPanel';
 
 interface PlayerBreakdown {
   category: string;
@@ -185,7 +186,7 @@ const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: number): 
     breakdown.push({ category: 'Bowling', description: `${wickets} wickets (+30 each)`, points: pts });
     computed += pts;
   }
-  if (lbwBowled > 0) {
+  if (hasBowlingContribution && lbwBowled > 0) {
     const pts = lbwBowled * 8;
     breakdown.push({ category: 'Bowling', description: `${lbwBowled} LBW/Bowled (+8 each)`, points: pts });
     computed += pts;
@@ -252,10 +253,6 @@ const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: number): 
     breakdown.push({ category: 'Other', description: 'Playing XI', points: 4 });
     computed += 4;
   }
-  if (substitute > 0) {
-    breakdown.push({ category: 'Other', description: 'Substitute', points: 4 });
-    computed += 4;
-  }
 
   const base = toNum(totalPoints);
   const diff = Math.round((base - computed) * 100) / 100;
@@ -293,6 +290,9 @@ export default function ContestDetailPage() {
   const [isFromCache, setIsFromCache] = useState(false);
   const [playerScoreDetails, setPlayerScoreDetails] = useState<Record<string, ScoreDetail>>({});
   const [countdownNow, setCountdownNow] = useState<number>(Date.now());
+  const [liveScorecard, setLiveScorecard] = useState<LiveScorecardData | null>(null);
+  const [loadingScorecardPanel, setLoadingScorecardPanel] = useState(false);
+  const [scorecardPanelError, setScorecardPanelError] = useState<string | null>(null);
 
 
 
@@ -308,6 +308,21 @@ export default function ContestDetailPage() {
       fetchAllTeams();
     }
   }, [user, contestId, contest?.matchId]);
+
+  useEffect(() => {
+    if (!contest?.matchId) return;
+    fetchLiveScorecard(contest.matchId);
+  }, [contest?.matchId]);
+
+  useEffect(() => {
+    if (!contest?.matchId) return;
+
+    const timer = setInterval(() => {
+      fetchLiveScorecard(contest.matchId);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, [contest?.matchId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -462,6 +477,27 @@ export default function ContestDetailPage() {
       setTeams(rankedTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
+    }
+  };
+
+  const fetchLiveScorecard = async (matchId: string) => {
+    if (!matchId) return;
+
+    setLoadingScorecardPanel(true);
+    try {
+      const res = await fetch(`/api/matches/scorecard?matchId=${matchId}`, { cache: 'no-store' });
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        setLiveScorecard(data.data as LiveScorecardData);
+        setScorecardPanelError(null);
+      } else {
+        setScorecardPanelError(data.error || 'Unable to load live scorecard');
+      }
+    } catch (error) {
+      setScorecardPanelError('Unable to load live scorecard');
+    } finally {
+      setLoadingScorecardPanel(false);
     }
   };
 
@@ -752,14 +788,17 @@ export default function ContestDetailPage() {
               </Card>
             )}
 
-            <Card className="order-1 relative overflow-hidden border border-accent/40 shadow-xl shadow-accent/10">
+            <Card className="order-1 relative overflow-hidden border border-accent/45 bg-gradient-to-br from-accent/10 via-surface to-card-purple/20 shadow-[0_20px_55px_rgba(96,165,250,0.16)]">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute -top-20 -right-20 h-52 w-52 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -left-14 h-52 w-52 rounded-full bg-success-bg/20 blur-3xl pointer-events-none" />
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Trophy size={20} className="text-accent" />
                     Leaderboard
                   </CardTitle>
+                  <Badge variant="info">{teams.length} Teams</Badge>
                   {teams.length >= 2 && (
                     <Button
                       size="sm"
@@ -772,7 +811,7 @@ export default function ContestDetailPage() {
                   )}
                 </div>
                 {lastScoreUpdate && (
-                  <div className="flex items-center gap-2 mt-2 text-xs text-text-secondary">
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-surface/70 px-3 py-1 text-xs text-text-secondary backdrop-blur-sm">
                     {isFromCache ? (
                       <>
                         <Trophy size={12} className="text-success-text" />
@@ -803,9 +842,9 @@ export default function ContestDetailPage() {
                       const isExpanded = expandedTeamId === team._id;
                       const isTeamLocked = !!team.isTeamLocked;
                       const rankStyles = {
-                        1: 'bg-warning-bg/40 text-warning-text border-warning-border',
-                        2: 'bg-gray-300/20 text-gray-300 border-gray-300',
-                        3: 'bg-warning-bg/25 text-warning-text border-warning-border',
+                        1: 'bg-gradient-to-br from-warning-bg/80 to-warning-bg/45 text-warning-text border-warning-border',
+                        2: 'bg-gradient-to-br from-info-bg/45 to-surface-light text-info-text border-info-border',
+                        3: 'bg-gradient-to-br from-card-purple/60 to-surface-light text-text-primary border-primary/40',
                       };
                       const rankStyle = rankStyles[rank as keyof typeof rankStyles];
 
@@ -813,10 +852,10 @@ export default function ContestDetailPage() {
                         <div key={team._id}>
                           <div
                             onClick={() => toggleTeamExpand(team)}
-                            className={`flex items-center gap-4 p-3 rounded-lg bg-surface cursor-pointer hover:bg-surface/80 transition-colors ${rank <= 3 ? 'border' : ''
+                            className={`group flex items-center gap-4 p-3 rounded-2xl border border-primary/25 bg-surface/85 cursor-pointer hover:bg-surface hover:border-accent/50 hover:shadow-[0_8px_24px_rgba(96,165,250,0.15)] transition-all ${rank <= 3 ? 'border-2' : ''
                               } ${rankStyle || ''}`}
                           >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${rank <= 3 ? rankStyle : 'bg-surface text-text-secondary'
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${rank <= 3 ? rankStyle : 'bg-surface-light text-text-secondary border border-primary/30'
                               }`}>
                               {rank}
                             </div>
@@ -834,20 +873,20 @@ export default function ContestDetailPage() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-accent">{team.score ?? 0}</p>
-                              <p className="text-xs text-text-secondary">pts</p>
+                            <div className="text-right rounded-xl border border-accent/25 bg-surface/70 px-2.5 py-1.5">
+                              <p className="font-bold text-accent leading-none">{team.score ?? 0}</p>
+                              <p className="text-[10px] uppercase tracking-wide text-text-secondary mt-1">pts</p>
                             </div>
-                            <div className="text-text-secondary">
+                            <div className="text-text-secondary group-hover:text-accent transition-colors">
                               {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </div>
                           </div>
 
                           {isExpanded && (
-                            <div className="mt-2 p-3 bg-surface/50 rounded-lg">
+                            <div className="mt-2 p-3 bg-gradient-to-b from-surface/80 to-surface-light/50 rounded-2xl border border-primary/20">
                               <p className="text-sm font-medium text-text-secondary mb-2">Team Players</p>
                               {isTeamLocked ? (
-                                <div className="rounded-lg border border-warning-border/30 bg-warning-bg/20 p-3">
+                                <div className="rounded-xl border border-warning-border/30 bg-warning-bg/20 p-3">
                                   <p className="text-sm text-warning-text flex items-center gap-2">
                                     <Lock size={14} />
                                     Opponent team is locked before match start.
@@ -862,7 +901,7 @@ export default function ContestDetailPage() {
                               ) : loadingScores ? (
                                 <p className="text-text-secondary text-sm">Loading scores...</p>
                               ) : (
-                                <div className="space-y-1">
+                                <div className="space-y-1.5">
                                   {team.players.map((player) => {
                                     const isCaptain = player.isCaptain || player.playerId === team.captainId;
                                     const isViceCaptain = player.isViceCaptain || player.playerId === team.viceCaptainId;
@@ -893,8 +932,8 @@ export default function ContestDetailPage() {
                                             }
                                           }}
                                           className={cn(
-                                            "flex items-center justify-between p-2 bg-surface rounded cursor-pointer transition-colors",
-                                            player.breakdown && player.breakdown.length > 0 && "hover:bg-surface-light cursor-pointer"
+                                            "flex items-center justify-between p-2.5 bg-surface rounded-xl border border-primary/15 cursor-pointer transition-all",
+                                            player.breakdown && player.breakdown.length > 0 && "hover:bg-surface-light hover:border-accent/35 cursor-pointer"
                                           )}
                                         >
                                           <div className="flex items-center gap-2">
@@ -919,7 +958,7 @@ export default function ContestDetailPage() {
                                             )}
                                             <div className="text-right">
                                               <p className={cn(
-                                                "font-bold font-mono",
+                                                "font-bold font-mono text-lg leading-none",
                                                 isCaptain ? "text-accent" : isViceCaptain ? "text-warning-text" : "text-text-primary"
                                               )}>
                                                 {playerPoints}
@@ -936,11 +975,11 @@ export default function ContestDetailPage() {
 
                                         {/* Player Breakdown */}
                                         {isPlayerExpanded && player.breakdown && player.breakdown.length > 0 && (
-                                          <div className="ml-4 mt-1 p-2 bg-background rounded border border-primary/20 mb-2">
-                                            <p className="text-xs font-semibold text-text-secondary mb-2">Points Breakdown</p>
+                                          <div className="ml-4 mt-1 p-2.5 bg-background rounded-xl border border-accent/20 mb-2 shadow-sm">
+                                            <p className="text-xs font-semibold text-text-secondary mb-2 uppercase tracking-wide">Points Breakdown</p>
                                             <div className="space-y-1">
                                               {player.breakdown.map((item, idx) => (
-                                                <div key={idx} className="flex items-center justify-between text-xs">
+                                                <div key={idx} className="flex items-center justify-between text-xs rounded-lg px-2 py-1 bg-surface/60">
                                                   <div className="flex items-center gap-2">
                                                     <Badge className={getCategoryColor(item.category)} variant="default">
                                                       {item.category}
@@ -966,6 +1005,26 @@ export default function ContestDetailPage() {
                       );
                     })}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="order-5 border border-accent/30 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-card via-surface-light/70 to-card border-b border-accent/20">
+                <CardTitle>Deep Live Scorecard</CardTitle>
+                <CardDescription>
+                  Auto-refreshes every 5 minutes and combines scorecard plus over-by-over streams.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {loadingScorecardPanel && !liveScorecard ? (
+                  <p className="text-sm text-text-secondary">Loading live scorecard...</p>
+                ) : scorecardPanelError && !liveScorecard ? (
+                  <p className="text-sm text-danger-text">{scorecardPanelError}</p>
+                ) : liveScorecard ? (
+                  <LiveScorecardPanel data={liveScorecard} />
+                ) : (
+                  <p className="text-sm text-text-secondary">Live scorecard will appear once match scorecard URL is available.</p>
                 )}
               </CardContent>
             </Card>
