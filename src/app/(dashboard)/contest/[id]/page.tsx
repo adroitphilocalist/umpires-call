@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +16,7 @@ import {
   PageLoader,
   Input
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock, Sparkles } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
 import { LiveScorecardPanel, LiveScorecardData } from '@/components/live/LiveScorecardPanel';
@@ -267,6 +267,62 @@ const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: number): 
   return breakdown;
 };
 
+function AnimatedNumber({
+  value,
+  className,
+  precision = 0,
+  showSign = false,
+}: {
+  value: number;
+  className?: string;
+  precision?: number;
+  showSign?: boolean;
+}) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    const startValue = prevValueRef.current;
+    const endValue = value;
+    const delta = endValue - startValue;
+    const duration = 650;
+    let frame = 0;
+    const startedAt = performance.now();
+
+    if (delta === 0) {
+      setDisplayValue(endValue);
+      return;
+    }
+
+    const tick = (now: number) => {
+      const t = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplayValue(startValue + delta * eased);
+      if (t < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        prevValueRef.current = endValue;
+      }
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  const factor = 10 ** precision;
+  const rounded = Math.round(displayValue * factor) / factor;
+  const text = precision > 0
+    ? rounded.toFixed(precision).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1')
+    : String(Math.round(rounded));
+
+  return (
+    <span className={className}>
+      {showSign && rounded > 0 ? '+' : ''}
+      {text}
+    </span>
+  );
+}
+
 export default function ContestDetailPage() {
   const params = useParams();
   const contestId = params.id as string;
@@ -286,6 +342,7 @@ export default function ContestDetailPage() {
   const [showCompare, setShowCompare] = useState(false);
   const [compareTeam1, setCompareTeam1] = useState<Team | null>(null);
   const [compareTeam2, setCompareTeam2] = useState<Team | null>(null);
+  const [compareRevealReady, setCompareRevealReady] = useState(false);
   const [lastScoreUpdate, setLastScoreUpdate] = useState<Date | null>(null);
   const [isFromCache, setIsFromCache] = useState(false);
   const [playerScoreDetails, setPlayerScoreDetails] = useState<Record<string, ScoreDetail>>({});
@@ -339,6 +396,15 @@ export default function ContestDetailPage() {
 
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (compareTeam1 && compareTeam2) {
+      setCompareRevealReady(false);
+      const timeout = window.setTimeout(() => setCompareRevealReady(true), 25);
+      return () => window.clearTimeout(timeout);
+    }
+    setCompareRevealReady(false);
+  }, [compareTeam1?._id, compareTeam2?._id]);
 
   const fetchContestDetails = async () => {
     try {
@@ -788,17 +854,14 @@ export default function ContestDetailPage() {
               </Card>
             )}
 
-            <Card className="order-1 relative overflow-hidden border border-accent/45 bg-gradient-to-br from-accent/10 via-surface to-card-purple/20 shadow-[0_20px_55px_rgba(96,165,250,0.16)]">
+            <Card className="order-1 relative overflow-hidden border border-accent/40 shadow-xl shadow-accent/10">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute -top-20 -right-20 h-52 w-52 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 -left-14 h-52 w-52 rounded-full bg-success-bg/20 blur-3xl pointer-events-none" />
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Trophy size={20} className="text-accent" />
                     Leaderboard
                   </CardTitle>
-                  <Badge variant="info">{teams.length} Teams</Badge>
                   {teams.length >= 2 && (
                     <Button
                       size="sm"
@@ -811,7 +874,7 @@ export default function ContestDetailPage() {
                   )}
                 </div>
                 {lastScoreUpdate && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-accent/25 bg-surface/70 px-3 py-1 text-xs text-text-secondary backdrop-blur-sm">
+                  <div className="flex items-center gap-2 mt-2 text-xs text-text-secondary">
                     {isFromCache ? (
                       <>
                         <Trophy size={12} className="text-success-text" />
@@ -842,9 +905,9 @@ export default function ContestDetailPage() {
                       const isExpanded = expandedTeamId === team._id;
                       const isTeamLocked = !!team.isTeamLocked;
                       const rankStyles = {
-                        1: 'bg-gradient-to-br from-warning-bg/80 to-warning-bg/45 text-warning-text border-warning-border',
-                        2: 'bg-gradient-to-br from-info-bg/45 to-surface-light text-info-text border-info-border',
-                        3: 'bg-gradient-to-br from-card-purple/60 to-surface-light text-text-primary border-primary/40',
+                        1: 'bg-warning-bg/40 text-warning-text border-warning-border',
+                        2: 'bg-gray-300/20 text-gray-300 border-gray-300',
+                        3: 'bg-warning-bg/25 text-warning-text border-warning-border',
                       };
                       const rankStyle = rankStyles[rank as keyof typeof rankStyles];
 
@@ -852,10 +915,10 @@ export default function ContestDetailPage() {
                         <div key={team._id}>
                           <div
                             onClick={() => toggleTeamExpand(team)}
-                            className={`group flex items-center gap-4 p-3 rounded-2xl border border-primary/25 bg-surface/85 cursor-pointer hover:bg-surface hover:border-accent/50 hover:shadow-[0_8px_24px_rgba(96,165,250,0.15)] transition-all ${rank <= 3 ? 'border-2' : ''
+                            className={`flex items-center gap-4 p-3 rounded-lg bg-surface cursor-pointer hover:bg-surface/80 transition-colors ${rank <= 3 ? 'border' : ''
                               } ${rankStyle || ''}`}
                           >
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${rank <= 3 ? rankStyle : 'bg-surface-light text-text-secondary border border-primary/30'
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${rank <= 3 ? rankStyle : 'bg-surface text-text-secondary'
                               }`}>
                               {rank}
                             </div>
@@ -873,20 +936,20 @@ export default function ContestDetailPage() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-right rounded-xl border border-accent/25 bg-surface/70 px-2.5 py-1.5">
-                              <p className="font-bold text-accent leading-none">{team.score ?? 0}</p>
-                              <p className="text-[10px] uppercase tracking-wide text-text-secondary mt-1">pts</p>
+                            <div className="text-right">
+                              <p className="font-bold text-accent">{team.score ?? 0}</p>
+                              <p className="text-xs text-text-secondary">pts</p>
                             </div>
-                            <div className="text-text-secondary group-hover:text-accent transition-colors">
+                            <div className="text-text-secondary">
                               {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </div>
                           </div>
 
                           {isExpanded && (
-                            <div className="mt-2 p-3 bg-gradient-to-b from-surface/80 to-surface-light/50 rounded-2xl border border-primary/20">
+                            <div className="mt-2 p-3 bg-surface/50 rounded-lg">
                               <p className="text-sm font-medium text-text-secondary mb-2">Team Players</p>
                               {isTeamLocked ? (
-                                <div className="rounded-xl border border-warning-border/30 bg-warning-bg/20 p-3">
+                                <div className="rounded-lg border border-warning-border/30 bg-warning-bg/20 p-3">
                                   <p className="text-sm text-warning-text flex items-center gap-2">
                                     <Lock size={14} />
                                     Opponent team is locked before match start.
@@ -901,7 +964,7 @@ export default function ContestDetailPage() {
                               ) : loadingScores ? (
                                 <p className="text-text-secondary text-sm">Loading scores...</p>
                               ) : (
-                                <div className="space-y-1.5">
+                                <div className="space-y-1">
                                   {team.players.map((player) => {
                                     const isCaptain = player.isCaptain || player.playerId === team.captainId;
                                     const isViceCaptain = player.isViceCaptain || player.playerId === team.viceCaptainId;
@@ -932,8 +995,8 @@ export default function ContestDetailPage() {
                                             }
                                           }}
                                           className={cn(
-                                            "flex items-center justify-between p-2.5 bg-surface rounded-xl border border-primary/15 cursor-pointer transition-all",
-                                            player.breakdown && player.breakdown.length > 0 && "hover:bg-surface-light hover:border-accent/35 cursor-pointer"
+                                            "flex items-center justify-between p-2 bg-surface rounded cursor-pointer transition-colors",
+                                            player.breakdown && player.breakdown.length > 0 && "hover:bg-surface-light cursor-pointer"
                                           )}
                                         >
                                           <div className="flex items-center gap-2">
@@ -958,7 +1021,7 @@ export default function ContestDetailPage() {
                                             )}
                                             <div className="text-right">
                                               <p className={cn(
-                                                "font-bold font-mono text-lg leading-none",
+                                                "font-bold font-mono",
                                                 isCaptain ? "text-accent" : isViceCaptain ? "text-warning-text" : "text-text-primary"
                                               )}>
                                                 {playerPoints}
@@ -975,11 +1038,11 @@ export default function ContestDetailPage() {
 
                                         {/* Player Breakdown */}
                                         {isPlayerExpanded && player.breakdown && player.breakdown.length > 0 && (
-                                          <div className="ml-4 mt-1 p-2.5 bg-background rounded-xl border border-accent/20 mb-2 shadow-sm">
-                                            <p className="text-xs font-semibold text-text-secondary mb-2 uppercase tracking-wide">Points Breakdown</p>
+                                          <div className="ml-4 mt-1 p-2 bg-background rounded border border-primary/20 mb-2">
+                                            <p className="text-xs font-semibold text-text-secondary mb-2">Points Breakdown</p>
                                             <div className="space-y-1">
                                               {player.breakdown.map((item, idx) => (
-                                                <div key={idx} className="flex items-center justify-between text-xs rounded-lg px-2 py-1 bg-surface/60">
+                                                <div key={idx} className="flex items-center justify-between text-xs">
                                                   <div className="flex items-center gap-2">
                                                     <Badge className={getCategoryColor(item.category)} variant="default">
                                                       {item.category}
@@ -1180,9 +1243,9 @@ export default function ContestDetailPage() {
         </div>
 
         {showCompare && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-card z-10">
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-5xl max-h-[92vh] overflow-y-auto border-accent/40 bg-gradient-to-br from-card via-surface to-card-purple/20 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+              <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-gradient-to-r from-card via-surface-light/70 to-card border-b border-accent/25 z-10">
                 <CardTitle className="flex items-center gap-2">
                   <ArrowRightLeft size={20} className="text-accent" />
                   Team Comparison
@@ -1200,7 +1263,7 @@ export default function ContestDetailPage() {
                         <div
                           key={team._id}
                           onClick={() => setCompareTeam1(team)}
-                          className="p-4 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 border border-primary/30 hover:border-accent transition-all"
+                          className="p-4 bg-surface/80 rounded-xl cursor-pointer hover:bg-surface border border-primary/30 hover:border-accent hover:shadow-[0_8px_20px_rgba(96,165,250,0.18)] transition-all"
                         >
                           <p className="font-medium text-text-primary">{team.user?.displayName || 'Unknown'}</p>
                           <p className="text-sm text-text-secondary">{team.score ?? 0} pts</p>
@@ -1221,7 +1284,7 @@ export default function ContestDetailPage() {
                         <div
                           key={team._id}
                           onClick={() => setCompareTeam2(team)}
-                          className="p-4 bg-surface rounded-lg cursor-pointer hover:bg-surface/80 border border-primary/30 hover:border-accent transition-all"
+                          className="p-4 bg-surface/80 rounded-xl cursor-pointer hover:bg-surface border border-primary/30 hover:border-accent hover:shadow-[0_8px_20px_rgba(96,165,250,0.18)] transition-all"
                         >
                           <p className="font-medium text-text-primary">{team.user?.displayName || 'Unknown'}</p>
                           <p className="text-sm text-text-secondary">{team.score ?? 0} pts</p>
@@ -1233,7 +1296,10 @@ export default function ContestDetailPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className={cn(
+                    "space-y-6 transition-all duration-500",
+                    compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                  )}>
                     {(() => {
                       const team1Score = compareTeam1.score ?? 0;
                       const team2Score = compareTeam2.score ?? 0;
@@ -1242,36 +1308,60 @@ export default function ContestDetailPage() {
 
                       return (
                         <>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className={cn("text-center p-4 rounded-lg border-2", overallDiff > 0 ? "border-accent bg-accent/10" : overallDiff === 0 ? "bg-surface" : "bg-surface")}>
+                          <div
+                            className={cn(
+                              "grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '40ms' }}
+                          >
+                            <div className={cn("text-center p-4 rounded-2xl border-2 bg-surface/80 transition-shadow", overallDiff > 0 ? "border-accent bg-accent/10 shadow-[0_0_28px_rgba(56,189,248,0.25)]" : overallDiff === 0 ? "border-primary/30" : "border-primary/30")}>
                               <p className="font-bold text-text-primary text-lg">{compareTeam1.user?.displayName}</p>
-                              <p className="text-accent text-3xl font-bold">{team1Score}</p>
+                              <p className="text-accent text-3xl font-bold"><AnimatedNumber value={team1Score} precision={0} /></p>
                               <p className="text-text-secondary text-sm">points</p>
                             </div>
-                            <div className={cn("text-center p-4 rounded-lg border-2", overallDiff < 0 ? "border-accent bg-accent/10" : overallDiff === 0 ? "bg-surface" : "bg-surface")}>
+                            <div className={cn("text-center p-4 rounded-2xl border-2 bg-surface/80 transition-shadow", overallDiff < 0 ? "border-accent bg-accent/10 shadow-[0_0_28px_rgba(56,189,248,0.25)]" : overallDiff === 0 ? "border-primary/30" : "border-primary/30")}>
                               <p className="font-bold text-text-primary text-lg">{compareTeam2.user?.displayName}</p>
-                              <p className="text-accent text-3xl font-bold">{team2Score}</p>
+                              <p className="text-accent text-3xl font-bold"><AnimatedNumber value={team2Score} precision={0} /></p>
                               <p className="text-text-secondary text-sm">points</p>
                             </div>
                           </div>
 
                           {leader ? (
-                            <div className="text-center p-3 bg-accent/10 rounded-lg border border-accent/30">
+                            <div
+                              className={cn(
+                                "text-center p-3 bg-accent/10 rounded-lg border border-accent/30 transition-all duration-500",
+                                compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                              )}
+                              style={{ transitionDelay: '100ms' }}
+                            >
                               <p className="text-text-primary font-medium">
-                                🏆 <span className="text-accent font-bold">{leader}</span> leads by <span className="text-accent font-bold text-2xl">{Math.abs(overallDiff)} pts</span>
+                                🏆 <span className="text-accent font-bold">{leader}</span> leads by <span className="text-accent font-bold text-2xl"><AnimatedNumber value={Math.abs(overallDiff)} precision={0} /> pts</span>
                               </p>
                             </div>
                           ) : (
-                            <div className="text-center p-3 bg-surface rounded-lg border border-warning-border/30">
+                            <div
+                              className={cn(
+                                "text-center p-3 bg-surface rounded-lg border border-warning-border/30 transition-all duration-500",
+                                compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                              )}
+                              style={{ transitionDelay: '100ms' }}
+                            >
                               <p className="text-warning-text font-medium">⚖️ Equal points!</p>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-center gap-8 p-2 bg-surface rounded-lg">
+                          <div
+                            className={cn(
+                              "flex items-center justify-center gap-8 p-2 bg-surface rounded-lg transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '140ms' }}
+                          >
                             <div className="text-center">
                               <p className="text-xs text-text-secondary">Difference</p>
                               <p className={cn("text-lg font-bold", overallDiff > 0 ? "text-success-text" : overallDiff < 0 ? "text-danger-text" : "text-text-secondary")}>
-                                {overallDiff > 0 ? '+' : ''}{overallDiff}
+                                <AnimatedNumber value={overallDiff} precision={0} showSign />
                               </p>
                             </div>
                           </div>
@@ -1280,8 +1370,24 @@ export default function ContestDetailPage() {
                     })()}
 
                     {(() => {
-                      const team1Players = compareTeam1.players.map(p => ({ ...p, points: getPlayerPoints(p) }));
-                      const team2Players = compareTeam2.players.map(p => ({ ...p, points: getPlayerPoints(p) }));
+                      const team1Players = compareTeam1.players.map((p) => {
+                        const points = getPlayerPoints(p);
+                        return {
+                          ...p,
+                          points,
+                          isCaptain: p.playerId === compareTeam1.captainId,
+                          isViceCaptain: p.playerId === compareTeam1.viceCaptainId,
+                        };
+                      });
+                      const team2Players = compareTeam2.players.map((p) => {
+                        const points = getPlayerPoints(p);
+                        return {
+                          ...p,
+                          points,
+                          isCaptain: p.playerId === compareTeam2.captainId,
+                          isViceCaptain: p.playerId === compareTeam2.viceCaptainId,
+                        };
+                      });
 
                       const normalizeName = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
                       const getCompareKey = (player: typeof team1Players[number]) => {
@@ -1290,12 +1396,15 @@ export default function ContestDetailPage() {
                         return `name:${normalizeName(player.name)}`;
                       };
 
-                      const team2ByKey = new Map(team2Players.map((p) => [getCompareKey(p), p]));
+                      const team1Enriched = team1Players.map((p) => ({ ...p, compareKey: getCompareKey(p) }));
+                      const team2Enriched = team2Players.map((p) => ({ ...p, compareKey: getCompareKey(p) }));
+
+                      const team2ByKey = new Map(team2Enriched.map((p) => [p.compareKey, p]));
                       const matchedKeys = new Set<string>();
 
-                      const commonPairs = team1Players
+                      const commonPairs = team1Enriched
                         .map((p1) => {
-                          const key = getCompareKey(p1);
+                          const key = p1.compareKey;
                           const p2 = team2ByKey.get(key);
                           if (!p2) return null;
                           matchedKeys.add(key);
@@ -1306,23 +1415,65 @@ export default function ContestDetailPage() {
                             diff: (p1.points || 0) - (p2.points || 0),
                           };
                         })
-                        .filter((entry): entry is { key: string; p1: typeof team1Players[number]; p2: typeof team2Players[number]; diff: number } => !!entry);
+                        .filter((entry): entry is { key: string; p1: typeof team1Enriched[number]; p2: typeof team2Enriched[number]; diff: number } => !!entry);
 
-                      const onlyInTeam1 = team1Players.filter((p1) => !team2ByKey.has(getCompareKey(p1)));
-                      const onlyInTeam2 = team2Players.filter((p2) => !matchedKeys.has(getCompareKey(p2)));
+                      const onlyInTeam1All = team1Enriched.filter((p1) => !team2ByKey.has(p1.compareKey));
+                      const onlyInTeam2All = team2Enriched.filter((p2) => !matchedKeys.has(p2.compareKey));
 
-                      const neutralCommon = commonPairs.filter((pair) => Math.abs(pair.diff) < 0.01);
-                      const impactCommon = commonPairs.filter((pair) => Math.abs(pair.diff) >= 0.01);
+                      const team1Captain = team1Enriched.find((p) => p.isCaptain);
+                      const team1ViceCaptain = team1Enriched.find((p) => p.isViceCaptain);
+                      const team2Captain = team2Enriched.find((p) => p.isCaptain);
+                      const team2ViceCaptain = team2Enriched.find((p) => p.isViceCaptain);
+
+                      const sameCaptain = !!team1Captain && !!team2Captain && team1Captain.compareKey === team2Captain.compareKey;
+                      const sameViceCaptain = !!team1ViceCaptain && !!team2ViceCaptain && team1ViceCaptain.compareKey === team2ViceCaptain.compareKey;
+
+                      const cvcDifferences = [
+                        {
+                          label: 'Captain',
+                          team1: team1Captain,
+                          team2: team2Captain,
+                          isDifferent: !sameCaptain,
+                        },
+                        {
+                          label: 'Vice-Captain',
+                          team1: team1ViceCaptain,
+                          team2: team2ViceCaptain,
+                          isDifferent: !sameViceCaptain,
+                        },
+                      ].filter((row) => row.isDifferent);
+
+                      const commonPlayers = commonPairs.filter((pair) => {
+                        const hasCvcTag = pair.p1.isCaptain || pair.p1.isViceCaptain || pair.p2.isCaptain || pair.p2.isViceCaptain;
+                        if (!hasCvcTag) return true;
+                        const sameRoleCaptain = pair.p1.isCaptain && pair.p2.isCaptain;
+                        const sameRoleVice = pair.p1.isViceCaptain && pair.p2.isViceCaptain;
+                        return sameRoleCaptain || sameRoleVice;
+                      });
+
+                      const onlyInTeam1 = onlyInTeam1All.filter((p) => !p.isCaptain && !p.isViceCaptain);
+                      const onlyInTeam2 = onlyInTeam2All.filter((p) => !p.isCaptain && !p.isViceCaptain);
 
                       const team1UniqueTotal = onlyInTeam1.reduce((sum, p) => sum + (p.points || 0), 0);
                       const team2UniqueTotal = onlyInTeam2.reduce((sum, p) => sum + (p.points || 0), 0);
-                      const commonImpactNet = impactCommon.reduce((sum, pair) => sum + pair.diff, 0);
-                      const differentialNet = team1UniqueTotal - team2UniqueTotal + commonImpactNet;
+                      const uniqueNet = team1UniqueTotal - team2UniqueTotal;
+                      const cvcNet = cvcDifferences.reduce((sum, row) => sum + ((row.team1?.points || 0) - (row.team2?.points || 0)), 0);
+                      const commonNet = commonPlayers.reduce((sum, pair) => sum + pair.diff, 0);
 
-                      const team1Captain = compareTeam1.players.find(p => p.playerId === compareTeam1.captainId);
-                      const team1ViceCaptain = compareTeam1.players.find(p => p.playerId === compareTeam1.viceCaptainId);
-                      const team2Captain = compareTeam2.players.find(p => p.playerId === compareTeam2.captainId);
-                      const team2ViceCaptain = compareTeam2.players.find(p => p.playerId === compareTeam2.viceCaptainId);
+                      const unionPlayers = new Set([...team1Enriched.map((p) => p.compareKey), ...team2Enriched.map((p) => p.compareKey)]);
+                      const overlapPct = unionPlayers.size > 0 ? Math.round((commonPairs.length / unionPlayers.size) * 100) : 0;
+                      const team1Score = compareTeam1.score ?? 0;
+                      const team2Score = compareTeam2.score ?? 0;
+                      const team1UniqueShare = team1Score > 0 ? Math.round((team1UniqueTotal / team1Score) * 100) : 0;
+                      const team2UniqueShare = team2Score > 0 ? Math.round((team2UniqueTotal / team2Score) * 100) : 0;
+
+                      const differentialNet = uniqueNet + cvcNet + commonNet;
+                      const trendIconClass = (value: number) =>
+                        value > 0 ? 'text-success-text' : value < 0 ? 'text-danger-text' : 'text-text-secondary';
+                      const TrendIcon = ({ value }: { value: number }) =>
+                        value > 0 ? <TrendingUp size={14} className="text-success-text" /> :
+                          value < 0 ? <TrendingDown size={14} className="text-danger-text" /> :
+                            <Minus size={14} className="text-text-secondary" />;
 
                       const getRoleColor = (role: string) => {
                         switch (role) {
@@ -1336,82 +1487,185 @@ export default function ContestDetailPage() {
 
                       return (
                         <>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div className="p-3 bg-surface rounded-lg border border-primary/30">
-                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam1.user?.displayName}</p>
-                              <p className="text-xl font-bold text-accent">{Math.round(team1UniqueTotal * 100) / 100}</p>
-                            </div>
-                            <div className="p-3 bg-surface rounded-lg border border-primary/30 text-center">
-                              <p className="text-xs text-text-secondary">Net Differential Impact</p>
-                              <p className={cn(
-                                "text-xl font-bold",
-                                differentialNet > 0 ? "text-success-text" : differentialNet < 0 ? "text-danger-text" : "text-text-secondary"
-                              )}>
-                                {differentialNet > 0 ? '+' : ''}{Math.round(differentialNet * 100) / 100}
-                              </p>
-                            </div>
-                            <div className="p-3 bg-surface rounded-lg border border-primary/30 text-right">
-                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam2.user?.displayName}</p>
-                              <p className="text-xl font-bold text-accent">{Math.round(team2UniqueTotal * 100) / 100}</p>
+                          <div
+                            className={cn(
+                              "sticky top-16 z-10 rounded-2xl border border-accent/35 bg-surface/90 backdrop-blur-md p-3 shadow-[0_10px_24px_rgba(31,41,55,0.22)] transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '180ms' }}
+                          >
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
+                                <div>
+                                  <p className="text-[11px] uppercase tracking-wide text-text-secondary">Overall Swing</p>
+                                  <p className={cn('text-lg font-bold', trendIconClass(differentialNet))}>
+                                    <AnimatedNumber value={differentialNet} precision={2} showSign />
+                                  </p>
+                                </div>
+                                <TrendIcon value={differentialNet} />
+                              </div>
+                              <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
+                                <div>
+                                  <p className="text-[11px] uppercase tracking-wide text-text-secondary">C/VC Swing</p>
+                                  <p className={cn('text-lg font-bold', trendIconClass(cvcNet))}>
+                                    <AnimatedNumber value={cvcNet} precision={2} showSign />
+                                  </p>
+                                </div>
+                                <TrendIcon value={cvcNet} />
+                              </div>
+                              <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
+                                <div>
+                                  <p className="text-[11px] uppercase tracking-wide text-text-secondary">Unique Picks Swing</p>
+                                  <p className={cn('text-lg font-bold', trendIconClass(uniqueNet))}>
+                                    <AnimatedNumber value={uniqueNet} precision={2} showSign />
+                                  </p>
+                                </div>
+                                <TrendIcon value={uniqueNet} />
+                              </div>
                             </div>
                           </div>
 
-                          {commonPairs.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-warning-text"></span>
-                                Common Players ({commonPairs.length})
-                              </h4>
-                              {neutralCommon.length > 0 && (
-                                <p className="text-xs text-text-secondary mb-2">
-                                  Neutral common picks: {neutralCommon.length} players (no point swing)
-                                </p>
-                              )}
-                              <div className="space-y-2">
-                                {commonPairs
-                                  .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
-                                  .map(({ key, p1, p2, diff }) => {
+                          <div
+                            className={cn(
+                              "grid grid-cols-1 sm:grid-cols-3 gap-3 transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '220ms' }}
+                          >
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam1.user?.displayName}</p>
+                              <p className="text-xl font-bold text-accent flex items-center gap-1">
+                                <AnimatedNumber value={team1UniqueTotal} precision={2} />
+                                <TrendIcon value={team1UniqueTotal} />
+                              </p>
+                            </div>
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-center">
+                              <p className="text-xs text-text-secondary">Net Differential Impact</p>
+                              <p className={cn("text-xl font-bold inline-flex items-center gap-1", trendIconClass(differentialNet))}>
+                                <AnimatedNumber value={differentialNet} precision={2} showSign />
+                                <TrendIcon value={differentialNet} />
+                              </p>
+                            </div>
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-right">
+                              <p className="text-xs text-text-secondary">Unique Total • {compareTeam2.user?.displayName}</p>
+                              <p className="text-xl font-bold text-accent inline-flex items-center gap-1 justify-end">
+                                <AnimatedNumber value={team2UniqueTotal} precision={2} />
+                                <TrendIcon value={team2UniqueTotal} />
+                              </p>
+                            </div>
+                          </div>
 
+                          <div
+                            className={cn(
+                              "grid grid-cols-1 md:grid-cols-4 gap-3 transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '260ms' }}
+                          >
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                              <p className="text-xs text-text-secondary">Captain/Vice Swing</p>
+                              <p className={cn("text-lg font-bold inline-flex items-center gap-1", trendIconClass(cvcNet))}>
+                                <AnimatedNumber value={cvcNet} precision={2} showSign />
+                                <TrendIcon value={cvcNet} />
+                              </p>
+                            </div>
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                              <p className="text-xs text-text-secondary">Player Overlap</p>
+                              <p className="text-lg font-bold text-accent">{overlapPct}%</p>
+                            </div>
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                              <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam1.user?.displayName}</p>
+                              <p className="text-lg font-bold text-info-text">{team1UniqueShare}%</p>
+                            </div>
+                            <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                              <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam2.user?.displayName}</p>
+                              <p className="text-lg font-bold text-info-text">{team2UniqueShare}%</p>
+                            </div>
+                          </div>
+
+                          <div className={cn(
+                            "rounded-2xl border p-3 transition-shadow",
+                            cvcNet > 0 ? "border-success-border/40 shadow-[0_0_22px_rgba(34,197,94,0.2)]" :
+                            cvcNet < 0 ? "border-danger-border/40 shadow-[0_0_22px_rgba(239,68,68,0.18)]" :
+                            "border-primary/20"
+                          ) + ' ' + cn(compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2', 'transition-all duration-500')}
+                            style={{ transitionDelay: '300ms' }}>
+                            <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-danger-text"></span>
+                              Different Captain & Vice-Captain ({cvcDifferences.length})
+                            </h4>
+                            {cvcDifferences.length === 0 ? (
+                              <p className="text-xs text-text-secondary">Both teams have same Captain and Vice-Captain.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {cvcDifferences.map((row) => {
+                                  const diff = (row.team1?.points || 0) - (row.team2?.points || 0);
                                   return (
-                                    <div key={key} className="grid grid-cols-5 gap-2 items-center p-2 bg-surface rounded border border-primary/20">
-                                      <div className="col-span-2 flex items-center gap-2">
-                                        <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(p1.role))}>
-                                          {p1.role}
-                                        </span>
-                                        <span className="text-sm text-text-primary truncate">{p1.name}</span>
+                                    <div key={row.label} className="grid grid-cols-12 gap-2 items-center p-3 bg-surface/80 rounded-xl border border-primary/20">
+                                      <div className="col-span-12 md:col-span-2 text-xs uppercase tracking-wide text-text-secondary font-semibold">{row.label}</div>
+
+                                      <div className="col-span-12 md:col-span-4 min-w-0 flex items-center gap-2 overflow-hidden">
+                                        {row.team1 ? (
+                                          <>
+                                            <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(row.team1.role))}>{row.team1.role}</span>
+                                            <div className="min-w-0">
+                                              <p className="text-[11px] text-text-secondary truncate">{compareTeam1.user?.displayName}</p>
+                                              <p className="text-sm font-semibold text-text-primary truncate">{row.team1.name}</p>
+                                            </div>
+                                          </>
+                                        ) : <span className="text-xs text-text-secondary">-</span>}
                                       </div>
-                                      <div className="text-center">
-                                        <span className="text-sm font-bold text-text-primary">{p1?.points || 0}</span>
-                                        {p1.playerId === team1Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {p1.playerId === team1ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
+
+                                      <div className="col-span-12 md:col-span-2 text-center text-sm font-bold text-text-primary bg-surface-light/70 rounded-lg px-2 py-1">
+                                        {row.team1?.points || 0} vs {row.team2?.points || 0}
                                       </div>
-                                      <div className="text-center">
-                                        <span className="text-sm font-bold text-text-primary">{p2?.points || 0}</span>
-                                        {p2.playerId === team2Captain?.playerId && <Crown size={10} className="inline ml-1 text-accent" />}
-                                        {p2.playerId === team2ViceCaptain?.playerId && <Star size={10} className="inline ml-1 text-warning-text" />}
+
+                                      <div className="col-span-12 md:col-span-3 min-w-0 flex items-center gap-2 overflow-hidden justify-start md:justify-end">
+                                        {row.team2 ? (
+                                          <>
+                                            <div className="min-w-0 text-left md:text-right">
+                                              <p className="text-[11px] text-text-secondary truncate">{compareTeam2.user?.displayName}</p>
+                                              <p className="text-sm font-semibold text-text-primary truncate">{row.team2.name}</p>
+                                            </div>
+                                            <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(row.team2.role))}>{row.team2.role}</span>
+                                          </>
+                                        ) : <span className="text-xs text-text-secondary">-</span>}
                                       </div>
-                                      <div className="text-right">
-                                        <span className={cn("text-sm font-bold", diff > 0 ? "text-success-text" : diff < 0 ? "text-danger-text" : "text-text-secondary")}>
-                                          {diff > 0 ? '+' : ''}{diff}
-                                        </span>
+
+                                      <div className={cn("col-span-12 md:col-span-1 text-right text-sm font-bold", diff > 0 ? "text-success-text" : diff < 0 ? "text-danger-text" : "text-text-secondary")}>
+                                        {diff > 0 ? '+' : ''}{Math.round(diff * 100) / 100}
                                       </div>
                                     </div>
                                   );
                                 })}
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
+                          <div
+                            className={cn(
+                              "grid grid-cols-1 lg:grid-cols-2 gap-4 transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '340ms' }}
+                          >
+                            <div className={cn(
+                              "rounded-2xl border p-3 transition-shadow",
+                              uniqueNet > 0 ? "border-success-border/40 shadow-[0_0_20px_rgba(34,197,94,0.18)]" : "border-primary/20"
+                            )}>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-info-text"></span>
                                 Differential Picks • {compareTeam1.user?.displayName} ({onlyInTeam1.length})
                               </h4>
+                              <p className="text-xs text-text-secondary mb-2">
+                                {uniqueNet > 0
+                                  ? `${compareTeam1.user?.displayName} leads this section by ${Math.round(Math.abs(uniqueNet) * 100) / 100} pts`
+                                  : uniqueNet < 0
+                                    ? `${compareTeam2.user?.displayName} leads this section by ${Math.round(Math.abs(uniqueNet) * 100) / 100} pts`
+                                    : 'This section is tied'}
+                              </p>
                               <div className="space-y-2">
                                 {onlyInTeam1.map(player => {
-                                  const isCaptain = player.playerId === compareTeam1.captainId;
-                                  const isViceCaptain = player.playerId === compareTeam1.viceCaptainId;
                                   return (
                                     <div key={player.playerId} className="flex items-center justify-between p-2 bg-surface rounded">
                                       <div className="flex items-center gap-2 overflow-hidden">
@@ -1419,8 +1673,6 @@ export default function ContestDetailPage() {
                                           {player.role}
                                         </span>
                                         <span className="text-sm text-text-primary truncate">{player.name}</span>
-                                        {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
-                                        {isViceCaptain && <Star size={12} className="text-warning-text flex-shrink-0" />}
                                       </div>
                                       <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
                                     </div>
@@ -1429,15 +1681,19 @@ export default function ContestDetailPage() {
                               </div>
                             </div>
 
-                            <div>
+                            <div className={cn(
+                              "rounded-2xl border p-3 transition-shadow",
+                              uniqueNet < 0 ? "border-success-border/40 shadow-[0_0_20px_rgba(34,197,94,0.18)]" : "border-primary/20"
+                            )}>
                               <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-success-text"></span>
                                 Differential Picks • {compareTeam2.user?.displayName} ({onlyInTeam2.length})
                               </h4>
+                              <p className="text-xs text-text-secondary mb-2">
+                                Net section swing: {uniqueNet > 0 ? '+' : ''}{Math.round(uniqueNet * 100) / 100}
+                              </p>
                               <div className="space-y-2">
                                 {onlyInTeam2.map(player => {
-                                  const isCaptain = player.playerId === compareTeam2.captainId;
-                                  const isViceCaptain = player.playerId === compareTeam2.viceCaptainId;
                                   return (
                                     <div key={player.playerId} className="flex items-center justify-between p-2 bg-surface rounded">
                                       <div className="flex items-center gap-2 overflow-hidden">
@@ -1445,8 +1701,6 @@ export default function ContestDetailPage() {
                                           {player.role}
                                         </span>
                                         <span className="text-sm text-text-primary truncate">{player.name}</span>
-                                        {isCaptain && <Crown size={12} className="text-accent flex-shrink-0" />}
-                                        {isViceCaptain && <Star size={12} className="text-warning-text flex-shrink-0" />}
                                       </div>
                                       <span className="text-sm font-bold text-accent ml-2">{player.points}</span>
                                     </div>
@@ -1456,30 +1710,50 @@ export default function ContestDetailPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/30">
-                            <div className="text-center p-3 bg-surface rounded-lg">
-                              <p className="text-text-secondary text-sm mb-1">Captain</p>
-                              <p className="font-medium text-text-primary">{team1Captain?.name || '-'}</p>
-                              <p className="text-accent text-sm">{team1Captain ? getPlayerPoints(team1Captain) : 0} pts</p>
-                            </div>
-                            <div className="text-center p-3 bg-surface rounded-lg">
-                              <p className="text-text-secondary text-sm mb-1">Captain</p>
-                              <p className="font-medium text-text-primary">{team2Captain?.name || '-'}</p>
-                              <p className="text-accent text-sm">{team2Captain ? getPlayerPoints(team2Captain) : 0} pts</p>
-                            </div>
-                            <div className="text-center p-3 bg-surface rounded-lg">
-                              <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
-                              <p className="font-medium text-text-primary">{team1ViceCaptain?.name || '-'}</p>
-                              <p className="text-warning-text text-sm">{team1ViceCaptain ? getPlayerPoints(team1ViceCaptain) : 0} pts</p>
-                            </div>
-                            <div className="text-center p-3 bg-surface rounded-lg">
-                              <p className="text-text-secondary text-sm mb-1">Vice-Captain</p>
-                              <p className="font-medium text-text-primary">{team2ViceCaptain?.name || '-'}</p>
-                              <p className="text-warning-text text-sm">{team2ViceCaptain ? getPlayerPoints(team2ViceCaptain) : 0} pts</p>
+                          <div
+                            className={cn(
+                              "transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '380ms' }}
+                          >
+                            <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-warning-text"></span>
+                              Common Players (No C/VC Differences) ({commonPlayers.length})
+                            </h4>
+                            <p className="text-xs text-text-secondary mb-2">
+                              Net swing from this section: {Math.round(commonNet * 100) / 100} (expected close to 0)
+                            </p>
+                            <div className="space-y-2">
+                              {commonPlayers
+                                .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+                                .map(({ key, p1, p2, diff }) => (
+                                  <div key={key} className="grid grid-cols-12 md:grid-cols-5 gap-2 items-center p-2 bg-surface rounded border border-primary/20">
+                                    <div className="col-span-5 md:col-span-2 flex items-center gap-2 min-w-0">
+                                      <span className={cn("text-xs px-2 py-0.5 rounded", getRoleColor(p1.role))}>{p1.role}</span>
+                                      <span className="text-sm text-text-primary truncate">{p1.name}</span>
+                                      {p1.isCaptain && p2.isCaptain && <Crown size={10} className="text-accent" />}
+                                      {p1.isViceCaptain && p2.isViceCaptain && <Star size={10} className="text-warning-text" />}
+                                    </div>
+                                    <div className="col-span-2 md:col-span-1 text-center text-sm font-bold text-text-primary">{p1?.points || 0}</div>
+                                    <div className="col-span-2 md:col-span-1 text-center text-sm font-bold text-text-primary">{p2?.points || 0}</div>
+                                    <div className={cn("col-span-1 md:col-span-1 text-right text-sm font-bold", diff > 0 ? "text-success-text" : diff < 0 ? "text-danger-text" : "text-text-secondary")}>
+                                      <AnimatedNumber value={Math.round(diff * 100) / 100} precision={2} showSign />
+                                    </div>
+                                  </div>
+                                ))}
                             </div>
                           </div>
 
-                          <Button variant="secondary" onClick={() => { setCompareTeam1(null); setCompareTeam2(null); }} className="w-full mt-4">
+                          <Button
+                            variant="secondary"
+                            onClick={() => { setCompareTeam1(null); setCompareTeam2(null); }}
+                            className={cn(
+                              "w-full mt-4 transition-all duration-500",
+                              compareRevealReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+                            )}
+                            style={{ transitionDelay: '420ms' }}
+                          >
                             Compare Different Teams
                           </Button>
                         </>
