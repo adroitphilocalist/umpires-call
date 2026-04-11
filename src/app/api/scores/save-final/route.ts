@@ -186,9 +186,6 @@ export async function POST(request: Request) {
             if (stats.playingXI === 1) {
               breakdown.push({ category: 'Other', description: 'Playing XI', points: 4 });
             }
-            if (stats.substitute === 1) {
-              breakdown.push({ category: 'Other', description: 'Substitute', points: 4 });
-            }
           }
 
           // Add multiplier note if captain/vice-captain
