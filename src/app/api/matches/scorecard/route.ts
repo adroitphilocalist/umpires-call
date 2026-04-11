@@ -17,6 +17,13 @@ interface RawOverByOverResponse {
 interface RawScorecard {
   scoreCard?: Array<{
     inningsId?: number;
+    scoreDetails?: {
+      runs?: number | string;
+      wickets?: number | string;
+      overs?: number | string;
+      runRate?: number | string;
+      rr?: number | string;
+    };
     batTeamDetails?: {
       batTeamName?: string;
       batTeamShortName?: string;
@@ -48,21 +55,36 @@ interface RawScorecard {
   }>;
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 const CRICBUZZ_BASE_URL = 'https://www.cricbuzz.com';
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
 const scorecardCache = new Map<string, { expiresAt: number; data: unknown }>();
 
-function parseOvers(overs: string | number | undefined): number {
-  if (typeof overs === 'number') return overs;
-  if (!overs) return 0;
+function oversToBalls(overs: string | number | undefined): number {
+  if (overs === undefined || overs === null) return 0;
 
-  const parts = String(overs).split('.');
-  if (parts.length === 2) {
-    return Number(parts[0]) + Number(parts[1]) / 6;
-  }
+  const value = String(overs).trim();
+  if (!value) return 0;
 
-  return Number(overs) || 0;
+  const [wholePart, ballPart] = value.split('.');
+  const completeOvers = Number.parseInt(wholePart || '0', 10);
+  const ballsInCurrentOver = Number.parseInt((ballPart || '0').slice(0, 1), 10);
+
+  if (!Number.isFinite(completeOvers)) return 0;
+  const safeBalls = Number.isFinite(ballsInCurrentOver) ? Math.min(Math.max(ballsInCurrentOver, 0), 5) : 0;
+  return completeOvers * 6 + safeBalls;
+}
+
+function ballsToOversValue(totalBalls: number): number {
+  const safeBalls = Math.max(0, Math.floor(totalBalls));
+  const completeOvers = Math.floor(safeBalls / 6);
+  const ballsInCurrentOver = safeBalls % 6;
+  return Number(`${completeOvers}.${ballsInCurrentOver}`);
 }
 
 function countDotBalls(summary: string): number {
@@ -214,10 +236,38 @@ export async function GET(request: Request) {
         liveDots: b.bowlerId ? (bowlerDots.get(b.bowlerId) || 0) : 0,
       }));
 
-      const totalRuns = batsmen.reduce((sum, b) => sum + b.runs, 0);
-      const wickets = batsmen.filter((b) => b.outDesc && !String(b.outDesc).toLowerCase().includes('not out') && b.outDesc !== 'Yet to bat').length;
-      const maxOvers = bowlers.reduce((max, b) => Math.max(max, parseOvers(b.overs)), 0);
-      const runRate = maxOvers > 0 ? Number((totalRuns / maxOvers).toFixed(2)) : 0;
+      const computedRuns = batsmen.reduce((sum, b) => sum + b.runs, 0);
+
+      const bowlerWickets = bowlers.reduce((sum, b) => sum + (b.wickets || 0), 0);
+      const nonBowlerDismissals = batsmen.filter((b) => {
+        const desc = String(b.outDesc || '').toLowerCase().trim();
+        if (!desc || desc === 'yet to bat') return false;
+        if (desc.includes('not out') || desc.includes('batting')) return false;
+        if (desc.includes('retired hurt') || desc.includes('absent hurt')) return false;
+
+        return (
+          desc.includes('run out') ||
+          desc.includes('retired out') ||
+          desc.includes('obstructing the field') ||
+          desc.includes('timed out') ||
+          desc.includes('handled the ball')
+        );
+      }).length;
+
+      const computedWickets = Math.min(10, bowlerWickets + nonBowlerDismissals);
+      const totalBallsBowled = bowlers.reduce((sum, b) => sum + oversToBalls(b.overs), 0);
+      const computedOvers = ballsToOversValue(totalBallsBowled);
+      const computedRunRate = totalBallsBowled > 0 ? Number((computedRuns / (totalBallsBowled / 6)).toFixed(2)) : 0;
+
+      const officialRuns = toFiniteNumber(innings.scoreDetails?.runs);
+      const officialWickets = toFiniteNumber(innings.scoreDetails?.wickets);
+      const officialOversRaw = toFiniteNumber(innings.scoreDetails?.overs);
+      const officialRunRate = toFiniteNumber(innings.scoreDetails?.runRate ?? innings.scoreDetails?.rr);
+
+      const totalRuns = officialRuns ?? computedRuns;
+      const wickets = officialWickets !== null ? Math.min(10, Math.max(0, Math.floor(officialWickets))) : computedWickets;
+      const inningsOvers = officialOversRaw !== null ? ballsToOversValue(oversToBalls(officialOversRaw)) : computedOvers;
+      const runRate = officialRunRate ?? computedRunRate;
 
       const topScorer = [...batsmen].sort((a, b) => b.runs - a.runs)[0] || null;
       const bestBowler = [...bowlers].sort((a, b) => {
@@ -233,7 +283,7 @@ export async function GET(request: Request) {
         bowlingTeamShortName: innings.bowlTeamDetails?.bowlTeamShortName || '',
         totalRuns,
         wickets,
-        overs: Number(maxOvers.toFixed(1)),
+        overs: inningsOvers,
         runRate,
         topScorer,
         bestBowler,
