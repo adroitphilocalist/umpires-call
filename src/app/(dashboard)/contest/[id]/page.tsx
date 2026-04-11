@@ -606,7 +606,7 @@ export default function ContestDetailPage() {
     if (contest?.inviteCode) {
       navigator.clipboard.writeText(contest.inviteCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 4000);
     }
   }, [contest?.inviteCode]);
 
