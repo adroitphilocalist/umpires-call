@@ -2,9 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { Phone, Trophy, User, KeyRound, Mail } from 'lucide-react';
+import { Phone, User, KeyRound, Mail } from 'lucide-react';
 
 function RegisterFormContent() {
   const router = useRouter();
@@ -169,7 +170,14 @@ function RegisterFormContent() {
       <Card className="w-full max-w-md relative z-10" padding="lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-3 bg-primary rounded-xl w-fit">
-            <Trophy className="w-10 h-10 text-accent" />
+            <Image
+              src="/brand-logo.png"
+              alt="Umpire's Call"
+              width={40}
+              height={40}
+              className="rounded-md"
+              priority
+            />
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <p className="text-text-secondary mt-2">Sign up with your credentials</p>

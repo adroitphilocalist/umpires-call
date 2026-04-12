@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { ArrowRightLeft, Crown, Minus, Star, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { ArrowRightLeft, Crown, Info, Minus, Star, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { AnimatedNumber } from './AnimatedNumber';
 import { ContestTeam, TeamPlayer } from './types';
 
@@ -16,6 +17,60 @@ interface CompareTeamsModalProps {
   setCompareTeam2: (team: ContestTeam | null) => void;
   onClose: () => void;
   getPlayerPoints: (player: TeamPlayer) => number;
+}
+
+function StatInfoHint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (wrapperRef.current && !wrapperRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label={text}
+        aria-expanded={open}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-surface-light/60 text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors"
+      >
+        <Info size={11} />
+      </button>
+      {open && (
+        <div
+          role="tooltip"
+          className="absolute right-0 top-7 z-20 w-52 rounded-lg border border-primary/30 bg-card px-2.5 py-2 text-[11px] leading-relaxed text-text-secondary shadow-[0_10px_22px_rgba(0,0,0,0.35)]"
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function CompareTeamsModal({
@@ -278,102 +333,6 @@ export function CompareTeamsModal({
 
                 return (
                   <>
-                    <div
-                      className={cn(
-                        'sticky top-16 z-10 rounded-2xl border border-accent/35 bg-surface/90 backdrop-blur-md p-3 shadow-[0_10px_24px_rgba(31,41,55,0.22)] transition-all duration-500',
-                        compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                      )}
-                      style={{ transitionDelay: '180ms' }}
-                    >
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">Overall Swing</p>
-                            <p className={cn('text-lg font-bold', trendIconClass(differentialNet))}>
-                              <AnimatedNumber value={differentialNet} precision={2} showSign />
-                            </p>
-                          </div>
-                          <TrendIcon value={differentialNet} />
-                        </div>
-                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">C/VC Swing</p>
-                            <p className={cn('text-lg font-bold', trendIconClass(cvcNet))}>
-                              <AnimatedNumber value={cvcNet} precision={2} showSign />
-                            </p>
-                          </div>
-                          <TrendIcon value={cvcNet} />
-                        </div>
-                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2 flex items-center justify-between">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">Unique Picks Swing</p>
-                            <p className={cn('text-lg font-bold', trendIconClass(uniqueNet))}>
-                              <AnimatedNumber value={uniqueNet} precision={2} showSign />
-                            </p>
-                          </div>
-                          <TrendIcon value={uniqueNet} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={cn(
-                        'grid grid-cols-1 sm:grid-cols-3 gap-3 transition-all duration-500',
-                        compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                      )}
-                      style={{ transitionDelay: '220ms' }}
-                    >
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
-                        <p className="text-xs text-text-secondary">Unique Total • {compareTeam1.user?.displayName}</p>
-                        <p className="text-xl font-bold text-accent flex items-center gap-1">
-                          <AnimatedNumber value={team1UniqueTotal} precision={2} />
-                          <TrendIcon value={team1UniqueTotal} />
-                        </p>
-                      </div>
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-center">
-                        <p className="text-xs text-text-secondary">Net Differential Impact</p>
-                        <p className={cn('text-xl font-bold inline-flex items-center gap-1', trendIconClass(differentialNet))}>
-                          <AnimatedNumber value={differentialNet} precision={2} showSign />
-                          <TrendIcon value={differentialNet} />
-                        </p>
-                      </div>
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-right">
-                        <p className="text-xs text-text-secondary">Unique Total • {compareTeam2.user?.displayName}</p>
-                        <p className="text-xl font-bold text-accent inline-flex items-center gap-1 justify-end">
-                          <AnimatedNumber value={team2UniqueTotal} precision={2} />
-                          <TrendIcon value={team2UniqueTotal} />
-                        </p>
-                      </div>
-                    </div>
-
-                    <div
-                      className={cn(
-                        'grid grid-cols-1 md:grid-cols-4 gap-3 transition-all duration-500',
-                        compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                      )}
-                      style={{ transitionDelay: '260ms' }}
-                    >
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
-                        <p className="text-xs text-text-secondary">Captain/Vice Swing</p>
-                        <p className={cn('text-lg font-bold inline-flex items-center gap-1', trendIconClass(cvcNet))}>
-                          <AnimatedNumber value={cvcNet} precision={2} showSign />
-                          <TrendIcon value={cvcNet} />
-                        </p>
-                      </div>
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
-                        <p className="text-xs text-text-secondary">Player Overlap</p>
-                        <p className="text-lg font-bold text-accent">{overlapPct}%</p>
-                      </div>
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
-                        <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam1.user?.displayName}</p>
-                        <p className="text-lg font-bold text-info-text">{team1UniqueShare}%</p>
-                      </div>
-                      <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
-                        <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam2.user?.displayName}</p>
-                        <p className="text-lg font-bold text-info-text">{team2UniqueShare}%</p>
-                      </div>
-                    </div>
-
                     <div className={cn(
                       'rounded-2xl border p-3 transition-shadow',
                       cvcNet > 0 ? 'border-success-border/40 shadow-[0_0_22px_rgba(34,197,94,0.2)]' :
@@ -536,6 +495,126 @@ export function CompareTeamsModal({
                       </div>
                     </div>
 
+                    <div
+                      className={cn(
+                        'rounded-2xl border border-accent/30 bg-surface/70 p-3 sm:p-4 space-y-3 transition-all duration-500',
+                        compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                      )}
+                      style={{ transitionDelay: '420ms' }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-sm font-semibold text-text-primary">Interesting Stats</h4>
+                        <p className="text-[11px] text-text-secondary">Quick read of why one team is ahead</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">Overall Swing</p>
+                            <StatInfoHint text="Total point swing from all comparison sections combined." />
+                          </div>
+                          <p className={cn('text-lg font-bold inline-flex items-center gap-1', trendIconClass(differentialNet))}>
+                            <AnimatedNumber value={differentialNet} precision={2} showSign />
+                            <TrendIcon value={differentialNet} />
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">C/VC Swing</p>
+                            <StatInfoHint text="Point gap created only by captain and vice-captain choices." />
+                          </div>
+                          <p className={cn('text-lg font-bold inline-flex items-center gap-1', trendIconClass(cvcNet))}>
+                            <AnimatedNumber value={cvcNet} precision={2} showSign />
+                            <TrendIcon value={cvcNet} />
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-primary/20 bg-surface-light/60 px-3 py-2">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-[11px] uppercase tracking-wide text-text-secondary">Unique Picks Swing</p>
+                            <StatInfoHint text="Point gap from players picked by one team but not the other." />
+                          </div>
+                          <p className={cn('text-lg font-bold inline-flex items-center gap-1', trendIconClass(uniqueNet))}>
+                            <AnimatedNumber value={uniqueNet} precision={2} showSign />
+                            <TrendIcon value={uniqueNet} />
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-xs text-text-secondary">Unique Total • {compareTeam1.user?.displayName}</p>
+                            <StatInfoHint text="Total points scored by players only this team has." />
+                          </div>
+                          <p className="text-xl font-bold text-accent flex items-center gap-1">
+                            <AnimatedNumber value={team1UniqueTotal} precision={2} />
+                            <TrendIcon value={team1UniqueTotal} />
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-center">
+                          <div className="flex items-start justify-between gap-2 mb-1 text-left">
+                            <p className="text-xs text-text-secondary">Net Differential Impact</p>
+                            <StatInfoHint text="Final net edge from common picks, unique picks, and C/VC picks together." />
+                          </div>
+                          <p className={cn('text-xl font-bold inline-flex items-center gap-1', trendIconClass(differentialNet))}>
+                            <AnimatedNumber value={differentialNet} precision={2} showSign />
+                            <TrendIcon value={differentialNet} />
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30 text-right">
+                          <div className="flex items-start justify-between gap-2 mb-1 text-left">
+                            <p className="text-xs text-text-secondary">Unique Total • {compareTeam2.user?.displayName}</p>
+                            <StatInfoHint text="Total points scored by players only this team has." />
+                          </div>
+                          <p className="text-xl font-bold text-accent inline-flex items-center gap-1 justify-end">
+                            <AnimatedNumber value={team2UniqueTotal} precision={2} />
+                            <TrendIcon value={team2UniqueTotal} />
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-xs text-text-secondary">Captain/Vice Swing</p>
+                            <StatInfoHint text="How many points C and VC decisions added or lost." />
+                          </div>
+                          <p className={cn('text-lg font-bold inline-flex items-center gap-1', trendIconClass(cvcNet))}>
+                            <AnimatedNumber value={cvcNet} precision={2} showSign />
+                            <TrendIcon value={cvcNet} />
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-xs text-text-secondary">Player Overlap</p>
+                            <StatInfoHint text="How much both teams are similar in player picks." />
+                          </div>
+                          <p className="text-lg font-bold text-accent">{overlapPct}%</p>
+                        </div>
+
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam1.user?.displayName}</p>
+                            <StatInfoHint text="Percent of this team's score coming from unique players." />
+                          </div>
+                          <p className="text-lg font-bold text-info-text">{team1UniqueShare}%</p>
+                        </div>
+
+                        <div className="p-3 bg-surface/80 rounded-xl border border-primary/30">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-xs text-text-secondary">Unique Reliance • {compareTeam2.user?.displayName}</p>
+                            <StatInfoHint text="Percent of this team's score coming from unique players." />
+                          </div>
+                          <p className="text-lg font-bold text-info-text">{team2UniqueShare}%</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <Button
                       variant="secondary"
                       onClick={() => { setCompareTeam1(null); setCompareTeam2(null); }}
@@ -543,7 +622,7 @@ export function CompareTeamsModal({
                         'w-full mt-4 transition-all duration-500',
                         compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                       )}
-                      style={{ transitionDelay: '420ms' }}
+                      style={{ transitionDelay: '470ms' }}
                     >
                       Compare Different Teams
                     </Button>
