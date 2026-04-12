@@ -2,9 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { User as UserIcon, Trophy, KeyRound } from 'lucide-react';
+import { User as UserIcon, KeyRound } from 'lucide-react';
 
 function LoginFormContent() {
   const searchParams = useSearchParams();
@@ -204,7 +205,14 @@ function LoginFormContent() {
       <Card className="w-full max-w-md relative z-10" padding="lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-3 bg-primary rounded-xl w-fit">
-            <Trophy className="w-10 h-10 text-accent" />
+            <Image
+              src="/brand-logo.png"
+              alt="Umpire's Call"
+              width={40}
+              height={40}
+              className="rounded-md"
+              priority
+            />
           </div>
           <CardTitle className="text-2xl">
             {step === 'FORGOT_PASS' || step === 'FORGOT_RESET' ? 'Reset Password' : 'Welcome Back'}

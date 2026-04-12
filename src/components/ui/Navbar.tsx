@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Trophy, PlusCircle, User, Menu, X, Users, BookOpen, LogOut } from 'lucide-react';
+import { Home, PlusCircle, User, Menu, X, Users, BookOpen, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import RulesModal from './RulesModal';
 import { ThemeToggle } from './ThemeToggle';
@@ -39,7 +40,14 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Trophy className="w-8 h-8 text-accent" />
+              <Image
+                src="/brand-logo.png"
+                alt="Umpire's Call"
+                width={32}
+                height={32}
+                className="rounded-md border border-primary/30"
+                priority
+              />
               <span className="text-xl font-bold text-text-primary font-heading">
                 Umpire&apos;s Call
               </span>
