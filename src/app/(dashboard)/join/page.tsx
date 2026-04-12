@@ -14,6 +14,8 @@ export default function JoinContestPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [foundContest, setFoundContest] = useState<{ _id: string; name: string } | null>(null);
+  const [linkPrefillTried, setLinkPrefillTried] = useState(false);
+  const [linkCodeDetected, setLinkCodeDetected] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -21,12 +23,11 @@ export default function JoinContestPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const findContestByCode = async (rawCode: string) => {
     setError('');
     setFoundContest(null);
 
-    const code = inviteCode.trim().toUpperCase();
+    const code = rawCode.trim().toUpperCase();
     if (code.length !== 6) {
       setError('Please enter a valid 6-character invite code');
       return;
@@ -50,6 +51,28 @@ export default function JoinContestPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || linkPrefillTried) {
+      return;
+    }
+
+    const codeFromLink = new URLSearchParams(window.location.search).get('code')?.trim().toUpperCase() || '';
+    if (!codeFromLink) {
+      setLinkPrefillTried(true);
+      return;
+    }
+
+    setInviteCode(codeFromLink);
+    setLinkCodeDetected(true);
+    setLinkPrefillTried(true);
+    void findContestByCode(codeFromLink);
+  }, [authLoading, isAuthenticated, linkPrefillTried]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await findContestByCode(inviteCode);
   };
 
   const handleJoin = () => {
@@ -98,6 +121,11 @@ export default function JoinContestPage() {
                     className="text-center text-xl tracking-widest font-mono"
                     autoFocus
                   />
+                  {linkCodeDetected && (
+                    <p className="text-xs text-success-text mt-2 text-center">
+                      Invite code detected from shared link.
+                    </p>
+                  )}
                 </div>
 
                 {error && (
