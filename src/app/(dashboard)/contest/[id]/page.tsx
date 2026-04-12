@@ -16,7 +16,7 @@ import {
   PageLoader,
   Input
 } from '@/components/ui';
-import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Copy, Check, Users, Calendar, MapPin, Trophy, ArrowLeft, ArrowRight, DollarSign, ChevronDown, ChevronUp, Crown, Star, GitCompare, X, ArrowRightLeft, Clock, Lock, Sparkles, TrendingUp, TrendingDown, Minus, Link2 } from 'lucide-react';
 import { Contest, Match } from '@/types';
 import { cn } from '@/lib/utils';
 import { LiveScorecardPanel, LiveScorecardData } from '@/components/live/LiveScorecardPanel';
@@ -335,6 +335,7 @@ export default function ContestDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [joinLinkCopied, setJoinLinkCopied] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [expandedPlayerId, setExpandedPlayerId] = useState<{ teamId: string; playerId: string } | null>(null);
   const [playerScores, setPlayerScores] = useState<Record<string, number>>({});
@@ -676,6 +677,15 @@ export default function ContestDetailPage() {
     }
   }, [contest?.inviteCode]);
 
+  const copyJoinLink = useCallback(() => {
+    if (!contest?.inviteCode) return;
+
+    const joinLink = `${window.location.origin}/join?code=${encodeURIComponent(contest.inviteCode)}`;
+    navigator.clipboard.writeText(joinLink);
+    setJoinLinkCopied(true);
+    setTimeout(() => setJoinLinkCopied(false), 4000);
+  }, [contest?.inviteCode]);
+
   const hasJoined = contest?.participants?.includes(user?._id || '') || !!userTeam;
   const match = contest?.match as Match | undefined;
   const matchDate = match?.date ? new Date(match.date) : null;
@@ -846,10 +856,22 @@ export default function ContestDetailPage() {
                       variant="secondary"
                       onClick={copyInviteCode}
                       className="px-3"
+                      title="Copy invite code"
                     >
                       {copied ? <Check size={18} className="text-success-text" /> : <Copy size={18} />}
                     </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={copyJoinLink}
+                      className="px-3"
+                      title="Copy direct join link"
+                    >
+                      {joinLinkCopied ? <Check size={18} className="text-success-text" /> : <Link2 size={18} />}
+                    </Button>
                   </div>
+                  <p className="mt-2 text-xs text-text-secondary">
+                    Share link: <span className="font-mono text-text-primary">/join?code={contest.inviteCode}</span>
+                  </p>
                 </CardContent>
               </Card>
             )}
