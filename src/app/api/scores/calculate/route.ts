@@ -5,6 +5,7 @@ import { updatePlayerScore, calculateTeamScores, getLeaderboard } from '@/lib/li
 import { Match } from '@/models/Match';
 import { Contest } from '@/models/Contest';
 import { Team, ITeam } from '@/models/Team';
+import { MatchLineup } from '@/models/MatchLineup';
 
 interface CricbuzzScorecard {
   scoreCard?: Array<{
@@ -394,6 +395,30 @@ export async function POST(request: Request) {
       );
     }
 
+    const approvedLineup = await MatchLineup.findOne({
+      matchId: match._id,
+      status: 'approved',
+    }).lean<any>();
+
+    const approvedPlayingXISet = new Set<string>();
+    const approvedImpactSubSet = new Set<string>();
+
+    if (approvedLineup) {
+      const blocks = [approvedLineup.team1, approvedLineup.team2].filter(Boolean);
+      for (const block of blocks) {
+        for (const player of block.playingXI || []) {
+          if (player.externalId) {
+            approvedPlayingXISet.add(String(player.externalId));
+          }
+        }
+        for (const player of block.impactSubs || []) {
+          if (player.externalId) {
+            approvedImpactSubSet.add(String(player.externalId));
+          }
+        }
+      }
+    }
+
     // Use over-by-over dots as source of truth when cricbuzzId is available.
     const correctedDotBalls = match.cricbuzzId
       ? await getBowlerDotBalls(String(match.cricbuzzId))
@@ -614,25 +639,52 @@ export async function POST(request: Request) {
     // Apply fielding points
     const fieldingEntries = Array.from(fieldingMap.entries());
     for (const [fielderId, fielding] of fieldingEntries) {
-      const existing = playerPointsMap.get(fielderId);
-      if (existing) {
-        existing.stats.catches = fielding.catches;
-        existing.stats.runOuts = fielding.runOutsDirect + fielding.runOutsIndirect;
+      const existing = playerPointsMap.get(fielderId) || {
+        points: 0,
+        stats: getDefaultStats(),
+      };
 
-        const fieldingPoints = calculateFieldingPoints(
-          fielding.catches,
-          fielding.stumpings,
-          fielding.runOutsDirect,
-          fielding.runOutsIndirect
-        );
-        existing.points += fieldingPoints;
+      existing.stats.catches = fielding.catches;
+      existing.stats.runOuts = fielding.runOutsDirect + fielding.runOutsIndirect;
+      existing.stats.stumpings = fielding.stumpings;
+      existing.stats.playingXI = 1;
+      playingXISet.add(fielderId);
+
+      const fieldingPoints = calculateFieldingPoints(
+        fielding.catches,
+        fielding.stumpings,
+        fielding.runOutsDirect,
+        fielding.runOutsIndirect
+      );
+      existing.points += fieldingPoints;
+
+      playerPointsMap.set(fielderId, existing);
+    }
+
+    if (approvedPlayingXISet.size > 0) {
+      for (const externalId of approvedPlayingXISet) {
+        const existing = playerPointsMap.get(externalId) || {
+          points: 0,
+          stats: getDefaultStats(),
+        };
+        existing.stats.playingXI = 1;
+        playerPointsMap.set(externalId, existing);
       }
     }
 
     // Add Playing XI bonus (+4)
     const playerEntries = Array.from(playerPointsMap.entries());
     for (const [externalId, playerData] of playerEntries) {
-      if (playingXISet.has(externalId) || playerData.stats.playingXI === 1) {
+      if (approvedImpactSubSet.has(externalId)) {
+        playerData.stats.substitute = 1;
+      }
+
+      const isPlayingXI = approvedPlayingXISet.size > 0
+        ? approvedPlayingXISet.has(externalId)
+        : (playingXISet.has(externalId) || playerData.stats.playingXI === 1);
+
+      if (isPlayingXI) {
+        playerData.stats.playingXI = 1;
         playerData.points += 4; // In announced lineups
       }
     }

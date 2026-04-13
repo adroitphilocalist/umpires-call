@@ -57,18 +57,19 @@ function StatInfoHint({ text }: { text: string }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label={text}
         aria-expanded={open}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-surface-light/60 text-text-secondary hover:text-text-primary hover:border-accent/40 transition-colors"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-primary/40 bg-surface text-text-primary hover:text-accent hover:border-accent/50 transition-colors"
       >
         <Info size={11} />
       </button>
-      {open && (
-        <div
-          role="tooltip"
-          className="absolute right-0 top-7 z-20 w-52 rounded-lg border border-primary/30 bg-card px-2.5 py-2 text-[11px] leading-relaxed text-text-secondary shadow-[0_10px_22px_rgba(0,0,0,0.35)]"
-        >
-          {text}
-        </div>
-      )}
+      <div
+        role="tooltip"
+        className={cn(
+          'absolute right-0 top-7 z-20 w-56 rounded-lg border border-accent/45 bg-[#0B1220] px-3 py-2.5 text-xs leading-relaxed text-white shadow-[0_14px_30px_rgba(0,0,0,0.55)] origin-top-right transition-all duration-150',
+          open ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
+        )}
+      >
+        {text}
+      </div>
     </div>
   );
 }
@@ -156,19 +157,19 @@ export function CompareTeamsModal({
                   <>
                     <div
                       className={cn(
-                        'grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-500',
+                        'grid grid-cols-2 gap-3 sm:gap-4 transition-all duration-500',
                         compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                       )}
                       style={{ transitionDelay: '40ms' }}
                     >
                       <div className={cn('text-center p-4 rounded-2xl border-2 bg-surface/80 transition-shadow', overallDiff > 0 ? 'border-accent bg-accent/10 shadow-[0_0_28px_rgba(56,189,248,0.25)]' : overallDiff === 0 ? 'border-primary/30' : 'border-primary/30')}>
-                        <p className="font-bold text-text-primary text-lg">{compareTeam1.user?.displayName}</p>
-                        <p className="text-accent text-3xl font-bold"><AnimatedNumber value={team1Score} precision={0} /></p>
+                        <p className="font-bold text-text-primary text-sm sm:text-lg truncate">{compareTeam1.user?.displayName}</p>
+                        <p className="text-accent text-2xl sm:text-3xl font-bold"><AnimatedNumber value={team1Score} precision={0} /></p>
                         <p className="text-text-secondary text-sm">points</p>
                       </div>
                       <div className={cn('text-center p-4 rounded-2xl border-2 bg-surface/80 transition-shadow', overallDiff < 0 ? 'border-accent bg-accent/10 shadow-[0_0_28px_rgba(56,189,248,0.25)]' : overallDiff === 0 ? 'border-primary/30' : 'border-primary/30')}>
-                        <p className="font-bold text-text-primary text-lg">{compareTeam2.user?.displayName}</p>
-                        <p className="text-accent text-3xl font-bold"><AnimatedNumber value={team2Score} precision={0} /></p>
+                        <p className="font-bold text-text-primary text-sm sm:text-lg truncate">{compareTeam2.user?.displayName}</p>
+                        <p className="text-accent text-2xl sm:text-3xl font-bold"><AnimatedNumber value={team2Score} precision={0} /></p>
                         <p className="text-text-secondary text-sm">points</p>
                       </div>
                     </div>
@@ -297,8 +298,8 @@ export function CompareTeamsModal({
                   return sameRoleCaptain || sameRoleVice;
                 });
 
-                const onlyInTeam1 = onlyInTeam1All.filter((p) => !p.isCaptain && !p.isViceCaptain);
-                const onlyInTeam2 = onlyInTeam2All.filter((p) => !p.isCaptain && !p.isViceCaptain);
+                const onlyInTeam1 = onlyInTeam1All;
+                const onlyInTeam2 = onlyInTeam2All;
 
                 const team1UniqueTotal = onlyInTeam1.reduce((sum, p) => sum + (p.points || 0), 0);
                 const team2UniqueTotal = onlyInTeam2.reduce((sum, p) => sum + (p.points || 0), 0);
@@ -354,30 +355,30 @@ export function CompareTeamsModal({
                               <div key={row.label} className="grid grid-cols-12 gap-2 items-center p-3 bg-surface/80 rounded-xl border border-primary/20">
                                 <div className="col-span-12 md:col-span-2 text-xs uppercase tracking-wide text-text-secondary font-semibold">{row.label}</div>
 
-                                <div className="col-span-12 md:col-span-4 min-w-0 flex items-center gap-2 overflow-hidden">
+                                <div className="col-span-5 md:col-span-4 min-w-0 flex items-start gap-2 overflow-hidden">
                                   {row.team1 ? (
                                     <>
-                                      <span className={cn('text-xs px-2 py-0.5 rounded', getRoleColor(row.team1.role))}>{row.team1.role}</span>
+                                      <span className={cn('hidden sm:inline-flex text-xs px-2 py-0.5 rounded', getRoleColor(row.team1.role))}>{row.team1.role}</span>
                                       <div className="min-w-0">
                                         <p className="text-[11px] text-text-secondary truncate">{compareTeam1.user?.displayName}</p>
-                                        <p className="text-sm font-semibold text-text-primary truncate">{row.team1.name}</p>
+                                        <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">{row.team1.name}</p>
                                       </div>
                                     </>
                                   ) : <span className="text-xs text-text-secondary">-</span>}
                                 </div>
 
-                                <div className="col-span-12 md:col-span-2 text-center text-sm font-bold text-text-primary bg-surface-light/70 rounded-lg px-2 py-1">
+                                <div className="col-span-2 md:col-span-2 text-center text-xs sm:text-sm font-bold text-text-primary bg-surface-light/70 rounded-lg px-1 sm:px-2 py-1">
                                   {row.team1?.points || 0} vs {row.team2?.points || 0}
                                 </div>
 
-                                <div className="col-span-12 md:col-span-3 min-w-0 flex items-center gap-2 overflow-hidden justify-start md:justify-end">
+                                <div className="col-span-5 md:col-span-3 min-w-0 flex items-start gap-2 overflow-hidden justify-end">
                                   {row.team2 ? (
                                     <>
                                       <div className="min-w-0 text-left md:text-right">
                                         <p className="text-[11px] text-text-secondary truncate">{compareTeam2.user?.displayName}</p>
-                                        <p className="text-sm font-semibold text-text-primary truncate">{row.team2.name}</p>
+                                        <p className="text-xs sm:text-sm font-semibold text-text-primary truncate">{row.team2.name}</p>
                                       </div>
-                                      <span className={cn('text-xs px-2 py-0.5 rounded', getRoleColor(row.team2.role))}>{row.team2.role}</span>
+                                      <span className={cn('hidden sm:inline-flex text-xs px-2 py-0.5 rounded', getRoleColor(row.team2.role))}>{row.team2.role}</span>
                                     </>
                                   ) : <span className="text-xs text-text-secondary">-</span>}
                                 </div>
@@ -394,7 +395,7 @@ export function CompareTeamsModal({
 
                     <div
                       className={cn(
-                        'grid grid-cols-1 lg:grid-cols-2 gap-4 transition-all duration-500',
+                        'grid grid-cols-2 gap-3 sm:gap-4 transition-all duration-500',
                         compareRevealReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                       )}
                       style={{ transitionDelay: '340ms' }}
@@ -403,7 +404,7 @@ export function CompareTeamsModal({
                         'rounded-2xl border p-3 transition-shadow',
                         uniqueNet > 0 ? 'border-success-border/40 shadow-[0_0_20px_rgba(34,197,94,0.18)]' : 'border-primary/20'
                       )}>
-                        <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-info-text"></span>
                           Differential Picks • {compareTeam1.user?.displayName} ({onlyInTeam1.length})
                         </h4>
@@ -435,7 +436,7 @@ export function CompareTeamsModal({
                         'rounded-2xl border p-3 transition-shadow',
                         uniqueNet < 0 ? 'border-success-border/40 shadow-[0_0_20px_rgba(34,197,94,0.18)]' : 'border-primary/20'
                       )}>
-                        <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-success-text"></span>
                           Differential Picks • {compareTeam2.user?.displayName} ({onlyInTeam2.length})
                         </h4>

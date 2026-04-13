@@ -53,6 +53,7 @@ export default function MyTeamPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [lineupByExternalId, setLineupByExternalId] = useState<Record<string, 'playing-xi' | 'impact-sub'>>({});
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -123,7 +124,45 @@ export default function MyTeamPage() {
               const playerTeamShort = getTeamShortName(p.team);
               return playerTeamShort === team1Short || playerTeamShort === team2Short;
             });
-            setPlayers(filteredPlayers);
+
+            const lineupStatusMap: Record<string, 'playing-xi' | 'impact-sub'> = {};
+            try {
+              const lineupRes = await fetch(`/api/matches/${match._id}/lineup`);
+              const lineupData = await lineupRes.json();
+              if (lineupData.success && lineupData.lineup?.status === 'approved') {
+                const sections = [lineupData.lineup.team1, lineupData.lineup.team2].filter(Boolean);
+                for (const section of sections) {
+                  for (const player of section.playingXI || []) {
+                    if (player.externalId) {
+                      lineupStatusMap[player.externalId] = 'playing-xi';
+                    }
+                  }
+                  for (const player of section.impactSubs || []) {
+                    if (player.externalId && !lineupStatusMap[player.externalId]) {
+                      lineupStatusMap[player.externalId] = 'impact-sub';
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Silent fallback: if lineup is unavailable, regular player list still works.
+            }
+
+            const rankByLineup = (player: Player) => {
+              const status = player.externalId ? lineupStatusMap[player.externalId] : undefined;
+              if (status === 'playing-xi') return 0;
+              if (status === 'impact-sub') return 1;
+              return 2;
+            };
+
+            const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+              const statusDiff = rankByLineup(a) - rankByLineup(b);
+              if (statusDiff !== 0) return statusDiff;
+              return a.name.localeCompare(b.name);
+            });
+
+            setLineupByExternalId(lineupStatusMap);
+            setPlayers(sortedPlayers);
           }
         }
       }
@@ -199,6 +238,8 @@ export default function MyTeamPage() {
 
   const totalCredits = selectedPlayers.reduce((sum, p) => sum + getPlayerCredit(p.playerId), 0);
   const creditsRemaining = MAX_CREDITS - totalCredits;
+  const playingXIVisibleCount = players.filter((player) => player.externalId && lineupByExternalId[player.externalId] === 'playing-xi').length;
+  const impactSubVisibleCount = players.filter((player) => player.externalId && lineupByExternalId[player.externalId] === 'impact-sub').length;
 
   const renderPlayerGroup = (title: string, playerList: Player[]) => {
     if (playerList.length === 0) return null;
@@ -248,15 +289,23 @@ export default function MyTeamPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded',
-                    player.role === 'batsman' && 'bg-info-bg/30 text-info-text',
-                    player.role === 'bowler' && 'bg-danger-bg/30 text-danger-text',
-                    player.role === 'all-rounder' && 'bg-card-purple/50 text-text-primary',
-                    player.role === 'wicket-keeper' && 'bg-success-bg/30 text-success-text'
-                  )}>
-                    {ROLE_LABELS[player.role] || player.role}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={cn(
+                      'text-xs px-2 py-0.5 rounded',
+                      player.role === 'batsman' && 'bg-info-bg/30 text-info-text',
+                      player.role === 'bowler' && 'bg-danger-bg/30 text-danger-text',
+                      player.role === 'all-rounder' && 'bg-card-purple/50 text-text-primary',
+                      player.role === 'wicket-keeper' && 'bg-success-bg/30 text-success-text'
+                    )}>
+                      {ROLE_LABELS[player.role] || player.role}
+                    </span>
+                    {player.externalId && lineupByExternalId[player.externalId] === 'playing-xi' && (
+                      <Badge variant="success">Playing XI</Badge>
+                    )}
+                    {player.externalId && lineupByExternalId[player.externalId] === 'impact-sub' && (
+                      <Badge variant="warning">Impact Sub</Badge>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-1">
                     {isCaptain && <Badge variant="warning">C</Badge>}
@@ -578,6 +627,17 @@ export default function MyTeamPage() {
                     )}>
                       Credits Left: {creditsRemaining}
                     </div>
+
+                    {(playingXIVisibleCount > 0 || impactSubVisibleCount > 0) && (
+                      <>
+                        <div className="px-3 py-1.5 rounded-full border border-success-border bg-success-bg/20 text-success-text text-xs">
+                          Playing XI: {playingXIVisibleCount}
+                        </div>
+                        <div className="px-3 py-1.5 rounded-full border border-warning-border bg-warning-bg/20 text-warning-text text-xs">
+                          Impact Subs: {impactSubVisibleCount}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
