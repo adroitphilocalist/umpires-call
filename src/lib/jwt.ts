@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const SECRET = process.env.NEXTAUTH_SECRET || 'your-secret-key';
-const EXPIRY = '12h';
+const EXPIRY = '7d';
 
 export function createToken(payload: { userId: string; phone: string; email: string; displayName: string }) {
   return jwt.sign(payload, SECRET, { expiresIn: EXPIRY });
