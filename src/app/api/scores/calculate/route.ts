@@ -679,9 +679,27 @@ export async function POST(request: Request) {
         playerData.stats.substitute = 1;
       }
 
+      const hasParticipated =
+        playerData.stats.balls > 0 ||
+        playerData.stats.runs > 0 ||
+        playerData.stats.overs > 0 ||
+        playerData.stats.wickets > 0 ||
+        playerData.stats.dots > 0 ||
+        playerData.stats.catches > 0 ||
+        playerData.stats.runOuts > 0 ||
+        playerData.stats.stumpings > 0 ||
+        playerData.stats.lbwBowled > 0 ||
+        playerData.stats.maiden > 0;
+
       const isPlayingXI = approvedPlayingXISet.size > 0
-        ? approvedPlayingXISet.has(externalId)
-        : (playingXISet.has(externalId) || playerData.stats.playingXI === 1);
+        ? (
+            approvedPlayingXISet.has(externalId) ||
+            approvedImpactSubSet.has(externalId) ||
+            playingXISet.has(externalId) ||
+            hasParticipated ||
+            playerData.stats.playingXI === 1
+          )
+        : (playingXISet.has(externalId) || hasParticipated || playerData.stats.playingXI === 1);
 
       if (isPlayingXI) {
         playerData.stats.playingXI = 1;

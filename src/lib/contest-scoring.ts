@@ -172,7 +172,14 @@ export const buildDetailedBreakdown = (stats?: MatchScoreStats, totalPoints?: nu
   }
 
   const base = toNum(totalPoints);
-  const diff = Math.round((base - computed) * 100) / 100;
+  let diff = Math.round((base - computed) * 100) / 100;
+
+  // If final residual includes duck penalty, show it explicitly instead of hiding it in adjustment.
+  if (runs === 0 && balls > 0 && diff <= -2) {
+    breakdown.push({ category: 'Batting', description: 'Duck (dismissed for 0)', points: -2 });
+    diff = Math.round((diff + 2) * 100) / 100;
+  }
+
   if (diff !== 0) {
     breakdown.push({ category: 'Other', description: 'Scoring adjustment', points: diff });
   }
