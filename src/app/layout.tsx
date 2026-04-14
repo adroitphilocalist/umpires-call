@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   metadataBase,
   title: "Umpire's Call - Fantasy Cricket",
   description: 'Play fantasy cricket and compete with others',
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
   icons: {
     icon: [{ url: '/icon.png', sizes: '64x64', type: 'image/png' }],
     apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
@@ -32,11 +35,6 @@ export const metadata: Metadata = {
     title: "Umpire's Call - Fantasy Cricket",
     description: 'Play fantasy cricket and compete with others',
     images: ['/twitter-image.png'],
-  },
-  appleWebApp: {
-    capable: true,
-    title: "Umpire's Call",
-    statusBarStyle: 'black-translucent',
   },
 };
 
