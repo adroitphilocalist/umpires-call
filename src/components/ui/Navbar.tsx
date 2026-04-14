@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, PlusCircle, User, Menu, X, Users, BookOpen, LogOut } from 'lucide-react';
+import { Home, PlusCircle, User, Menu, X, Users, BookOpen, LogOut, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import RulesModal from './RulesModal';
 import { ThemeToggle } from './ThemeToggle';
@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/daily-leaderboard', label: 'Daily Board', icon: BarChart3 },
   { href: '/join', label: 'Join Contest', icon: Users },
   { href: '/create-contest', label: 'Create', icon: PlusCircle },
   { href: '/profile', label: 'Profile', icon: User },

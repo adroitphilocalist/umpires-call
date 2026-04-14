@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   '/',
   '/login',
   '/register',
+  '/manifest.webmanifest',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/send-otp',
