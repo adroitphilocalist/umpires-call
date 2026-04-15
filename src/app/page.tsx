@@ -16,7 +16,7 @@ import {
   Globe,
   ShieldCheck,
   GraduationCap,
-  Award,
+  Shield,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -167,21 +167,6 @@ export default function HomePage() {
               </div>
 
               <div className="lg:col-span-1 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-primary/35 bg-surface/70 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-text-secondary">CGPA</p>
-                    <p className="text-2xl font-bold text-text-primary mt-1">9.39 / 10</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/35 bg-surface/70 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-text-secondary">Internships</p>
-                    <p className="text-2xl font-bold text-text-primary mt-1">4+</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/35 bg-surface/70 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-text-secondary">Hackathons</p>
-                    <p className="text-2xl font-bold text-text-primary mt-1">Top Finishes</p>
-                  </div>
-                </div>
-
                 <div className="rounded-2xl border border-primary/35 bg-card/80 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <GraduationCap className="w-5 h-5 text-accent" />
@@ -195,28 +180,15 @@ export default function HomePage() {
 
                 <div className="rounded-2xl border border-primary/35 bg-card/80 p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <Award className="w-5 h-5 text-accent" />
-                    <h3 className="text-xl font-semibold text-text-primary">Highlights</h3>
+                    <Shield className="w-5 h-5 text-accent" />
+                    <h3 className="text-xl font-semibold text-text-primary">Current Focus Areas</h3>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      'Cyber Security',
-                      'Next.js + TypeScript',
-                      'Node.js + MongoDB',
-                      'Kafka + PySpark',
-                      'AWS Cloud Foundations',
-                      'SQL (Advanced)',
-                      'Springer Conference Paper',
-                      'Competitive Hackathon Finalist',
-                    ].map((item) => (
-                      <span
-                        key={item}
-                        className="px-3 py-1.5 rounded-full text-sm border border-accent/30 bg-accent/10 text-text-primary"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+                  <ul className="space-y-2 text-text-secondary text-sm">
+                    <li className="rounded-lg border border-primary/20 bg-surface/60 px-3 py-2">Cyber Security and secure architecture</li>
+                    <li className="rounded-lg border border-primary/20 bg-surface/60 px-3 py-2">Full-stack development with Next.js and TypeScript</li>
+                    <li className="rounded-lg border border-primary/20 bg-surface/60 px-3 py-2">Scalable backend systems with Node.js and MongoDB</li>
+                    <li className="rounded-lg border border-primary/20 bg-surface/60 px-3 py-2">Data and cloud workflows using SQL, PySpark, and AWS</li>
+                  </ul>
                 </div>
               </div>
             </div>
