@@ -41,6 +41,7 @@ export function useContestDetailData({
   const [liveScorecard, setLiveScorecard] = useState<LiveScorecardData | null>(null);
   const [loadingScorecardPanel, setLoadingScorecardPanel] = useState(false);
   const [scorecardPanelError, setScorecardPanelError] = useState<string | null>(null);
+  const [isAutoReloadPaused, setIsAutoReloadPaused] = useState(false);
 
   const fetchPlayerScores = useCallback(async (
     matchId: string
@@ -270,12 +271,14 @@ export function useContestDetailData({
   }, [contest?.matchId, fetchLiveScorecard]);
 
   useEffect(() => {
+    if (isAutoReloadPaused) return;
+
     const timer = setInterval(() => {
       window.location.reload();
     }, 2 * 60 * 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isAutoReloadPaused]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -368,6 +371,10 @@ export function useContestDetailData({
     setTimeout(() => setJoinLinkCopied(false), 4000);
   }, [contest?.inviteCode]);
 
+  const toggleAutoReloadPaused = useCallback(() => {
+    setIsAutoReloadPaused((prev) => !prev);
+  }, []);
+
   const hasJoined = contest?.participants?.includes(user?._id || '') || !!userTeam;
   const match = contest?.match as Match | undefined;
   const matchDate = match?.date ? new Date(match.date) : null;
@@ -407,6 +414,7 @@ export function useContestDetailData({
     liveScorecard,
     loadingScorecardPanel,
     scorecardPanelError,
+    isAutoReloadPaused,
     hasJoined,
     getPlayerPoints,
     toggleTeamExpand,
@@ -417,5 +425,6 @@ export function useContestDetailData({
     setShowCompare,
     setCompareTeam1,
     setCompareTeam2,
+    toggleAutoReloadPaused,
   };
 }

@@ -10,7 +10,7 @@ import {
   Button,
   PageLoader
 } from '@/components/ui';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { ContestOverviewCard } from '@/components/contest/ContestOverviewCard';
 import { MatchDetailsCard } from '@/components/contest/MatchDetailsCard';
 import { InviteCodeCard } from '@/components/contest/InviteCodeCard';
@@ -57,6 +57,7 @@ export default function ContestDetailPage() {
     liveScorecard,
     loadingScorecardPanel,
     scorecardPanelError,
+    isAutoReloadPaused,
     hasJoined,
     getPlayerPoints,
     toggleTeamExpand,
@@ -67,6 +68,7 @@ export default function ContestDetailPage() {
     setShowCompare,
     setCompareTeam1,
     setCompareTeam2,
+    toggleAutoReloadPaused,
   } = useContestDetailData({
     contestId,
     user,
@@ -110,13 +112,20 @@ export default function ContestDetailPage() {
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6"
-        >
-          <ArrowLeft size={20} />
-          <span>Back</span>
-        </button>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-text-secondary hover:text-text-primary"
+          >
+            <ArrowLeft size={20} />
+            <span>Back</span>
+          </button>
+
+          <Button variant="secondary" size="sm" onClick={toggleAutoReloadPaused}>
+            {isAutoReloadPaused ? <Play size={14} className="mr-1" /> : <Pause size={14} className="mr-1" />}
+            {isAutoReloadPaused ? 'Resume Auto-Reload' : 'Pause Auto-Reload'}
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 flex flex-col gap-6">
