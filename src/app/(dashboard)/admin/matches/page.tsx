@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar, Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, PageLoader, Modal } from '@/components/ui';
 import { Match } from '@/types';
-import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2, PlusCircle, ClipboardList } from 'lucide-react';
+import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2, PlusCircle, ClipboardList, Database } from 'lucide-react';
 
 interface MatchWithScores extends Match {
   hasScores?: boolean;
@@ -62,6 +62,8 @@ export default function AdminMatchesPage() {
   const [lineupParsing, setLineupParsing] = useState(false);
   const [lineupApproving, setLineupApproving] = useState(false);
   const [lineupError, setLineupError] = useState<string | null>(null);
+  const [finalizingMatchId, setFinalizingMatchId] = useState<string | null>(null);
+  const [finalizedMatchIds, setFinalizedMatchIds] = useState<Record<string, boolean>>({});
 
   const formatDateTimeLocal = (value: string | Date) => {
     const date = new Date(value);
@@ -284,6 +286,48 @@ export default function AdminMatchesPage() {
       if (!silent) {
         setCalculating(null);
       }
+    }
+  };
+
+  const finalizeMatchResults = async (match: MatchWithScores, force = false) => {
+    if (match.status !== 'completed') {
+      alert('Final results can be saved only after match completion.');
+      return;
+    }
+
+    const confirmMessage = force
+      ? 'This will rebuild and overwrite previously saved final results for this match. Continue?'
+      : 'Save final results for all contests of this completed match?';
+
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) {
+      return;
+    }
+
+    setFinalizingMatchId(match._id);
+    try {
+      const res = await fetch('/api/scores/save-final', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId: match._id, force }),
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Failed to save final results');
+        return;
+      }
+
+      const saved = Number(data?.meta?.savedContests || 0);
+      const skipped = Number(data?.meta?.skippedContests || 0);
+      const totalTeams = Number(data?.meta?.totalTeams || 0);
+
+      setFinalizedMatchIds((prev) => ({ ...prev, [match._id]: true }));
+      alert(`Finalization complete. Saved contests: ${saved}, skipped: ${skipped}, total teams snapshotted: ${totalTeams}.`);
+    } catch (error) {
+      alert('Failed to save final results');
+    } finally {
+      setFinalizingMatchId(null);
     }
   };
 
@@ -638,6 +682,17 @@ export default function AdminMatchesPage() {
                           <ClipboardList size={14} className="mr-1" />
                           Lineup
                         </Button>
+                        {match.status === 'completed' && (
+                          <Button
+                            size="sm"
+                            variant={finalizedMatchIds[match._id] ? 'secondary' : 'danger'}
+                            onClick={() => finalizeMatchResults(match)}
+                            isLoading={finalizingMatchId === match._id}
+                          >
+                            <Database size={14} className="mr-1" />
+                            {finalizedMatchIds[match._id] ? 'Finalized' : 'Save Final'}
+                          </Button>
+                        )}
                         {editingId === match._id ? (
                           <>
                             <Button

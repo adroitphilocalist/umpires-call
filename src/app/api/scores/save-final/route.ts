@@ -5,10 +5,31 @@ import { Match } from '@/models/Match';
 import { Contest } from '@/models/Contest';
 import { Team } from '@/models/Team';
 import { Player } from '@/models/Player';
-import { MatchScore } from '@/models/MatchScore';
+import { MatchScore, IMatchScoreStats } from '@/models/MatchScore';
 import { TeamFinalResult } from '@/models/TeamFinalResult';
 import { ContestFinalResult } from '@/models/ContestFinalResult';
 import { User } from '@/models/User';
+import { TeamPlayerFinalResult } from '@/models/TeamPlayerFinalResult';
+import { MatchPlayerFinalScoreSnapshot } from '@/models/MatchPlayerFinalScoreSnapshot';
+import { FinalizationRun } from '@/models/FinalizationRun';
+import { verifyToken } from '@/lib/jwt';
+import { buildDetailedBreakdown } from '@/lib/contest-scoring';
+
+const ADMIN_PHONE = '+916291299136';
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+
+interface AuthPayload {
+  userId: string;
+  phone: string;
+  email: string;
+  displayName: string;
+}
+
+interface FinalizeRequestBody {
+  matchId?: string;
+  contestId?: string;
+  force?: boolean;
+}
 
 interface IPlayerPointsBreakdown {
   category: string;
@@ -16,22 +37,281 @@ interface IPlayerPointsBreakdown {
   points: number;
 }
 
-export async function POST(request: Request) {
+interface LeanMatchScore {
+  matchId: mongoose.Types.ObjectId;
+  playerId: mongoose.Types.ObjectId;
+  externalId: string;
+  points: number;
+  stats?: Partial<IMatchScoreStats>;
+}
+
+interface TeamPlayerComputation {
+  playerId: mongoose.Types.ObjectId;
+  externalId: string;
+  playerName: string;
+  role: string;
+  creditCost: number;
+  basePoints: number;
+  finalPoints: number;
+  multiplier: number;
+  isCaptain: boolean;
+  isViceCaptain: boolean;
+  breakdown: IPlayerPointsBreakdown[];
+  stats: IMatchScoreStats;
+}
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+const toNum = (value: unknown): number => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const toStatsSnapshot = (stats?: Partial<IMatchScoreStats>): IMatchScoreStats => ({
+  runs: toNum(stats?.runs),
+  balls: toNum(stats?.balls),
+  dots: toNum(stats?.dots),
+  fours: toNum(stats?.fours),
+  sixes: toNum(stats?.sixes),
+  strikeRate: toNum(stats?.strikeRate),
+  wickets: toNum(stats?.wickets),
+  overs: toNum(stats?.overs),
+  maiden: toNum(stats?.maiden),
+  economy: toNum(stats?.economy),
+  catches: toNum(stats?.catches),
+  runOuts: toNum(stats?.runOuts),
+  stumpings: toNum(stats?.stumpings),
+  lbwBowled: toNum(stats?.lbwBowled),
+  playingXI: toNum(stats?.playingXI),
+  substitute: toNum(stats?.substitute),
+});
+
+function getMatchStatus(matchDate: Date, dbStatus?: string): 'completed' | 'live' | 'upcoming' {
+  const now = new Date();
+  const normalizedMatchTime = new Date(matchDate);
+
+  if (dbStatus === 'completed') {
+    return 'completed';
+  }
+
+  if (now < normalizedMatchTime) {
+    return 'upcoming';
+  }
+
+  const endTime = new Date(normalizedMatchTime.getTime() + FIVE_HOURS_MS);
+  if (now < endTime) {
+    return 'live';
+  }
+
+  return 'completed';
+}
+
+function getAuthPayload(request: Request): AuthPayload | null {
+  const authHeader = request.headers.get('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  const cookieHeader = request.headers.get('cookie') || '';
+  const tokenCookie = cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('auth-token='));
+
+  const cookieToken = tokenCookie
+    ? decodeURIComponent(tokenCookie.substring('auth-token='.length))
+    : '';
+
+  const token = bearerToken || cookieToken;
+  if (!token) {
+    return null;
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  return payload as AuthPayload;
+}
+
+function buildBreakdown(
+  stats: IMatchScoreStats,
+  basePoints: number,
+  isCaptain: boolean,
+  isViceCaptain: boolean
+): IPlayerPointsBreakdown[] {
+  const breakdown = buildDetailedBreakdown(stats, basePoints).map((item) => ({
+    category: item.category,
+    description: item.description,
+    points: round2(toNum(item.points)),
+  }));
+
+  const multiplier = isCaptain ? 2 : isViceCaptain ? 1.5 : 1;
+  const finalPoints = round2(basePoints * multiplier);
+  const multiplierBonus = round2(finalPoints - basePoints);
+
+  if (multiplierBonus !== 0) {
+    breakdown.push({
+      category: 'Multiplier',
+      description: isCaptain ? 'Captain (2x)' : 'Vice-captain (1.5x)',
+      points: multiplierBonus,
+    });
+  }
+
+  if (breakdown.length === 0) {
+    breakdown.push({ category: 'Other', description: 'Base fantasy points', points: round2(basePoints) });
+  }
+
+  return breakdown;
+}
+
+async function runWithOptionalTransaction(
+  work: (session: mongoose.ClientSession | null) => Promise<void>
+) {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      await work(session);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const transactionUnsupported = message.includes(
+      'Transaction numbers are only allowed on a replica set member or mongos'
+    );
+
+    if (transactionUnsupported) {
+      await work(null);
+      return;
+    }
+
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+}
+
+export async function GET(request: Request) {
   try {
     await dbConnect();
 
-    const data = await request.json();
-    const { matchId, contestId } = data;
-
-    if (!matchId) {
+    const auth = getAuthPayload(request);
+    if (!auth || auth.phone !== ADMIN_PHONE) {
       return NextResponse.json(
-        { success: false, error: 'matchId is required' },
+        { success: false, error: 'Only admin can view finalization status' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const matchId = searchParams.get('matchId');
+    const contestId = searchParams.get('contestId');
+
+    if (!matchId || !mongoose.Types.ObjectId.isValid(matchId)) {
+      return NextResponse.json(
+        { success: false, error: 'Valid matchId is required' },
         { status: 400 }
       );
     }
 
     const matchObjectId = new mongoose.Types.ObjectId(matchId);
-    const match = await Match.findById(matchId);
+    const contestFilter: Record<string, unknown> = { matchId: matchObjectId };
+
+    if (contestId) {
+      if (!mongoose.Types.ObjectId.isValid(contestId)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid contestId format' },
+          { status: 400 }
+        );
+      }
+      contestFilter._id = new mongoose.Types.ObjectId(contestId);
+    }
+
+    const contests = await Contest.find(contestFilter).lean<any[]>();
+    const contestIds = contests.map((contest) => contest._id);
+
+    const finalResults = await ContestFinalResult.find({ contestId: { $in: contestIds } })
+      .sort({ completedAt: -1 })
+      .lean<any[]>();
+
+    const latestRun = await FinalizationRun.findOne({
+      matchId: matchObjectId,
+      ...(contestId ? { contestId: new mongoose.Types.ObjectId(contestId) } : {}),
+    })
+      .sort({ startedAt: -1 })
+      .lean<any>();
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        matchId,
+        contestId: contestId || null,
+        totalContests: contests.length,
+        savedContests: finalResults.filter((row) => row.isSaved).length,
+        finalizedContests: finalResults.map((row) => ({
+          contestId: String(row.contestId),
+          contestName: row.contestName,
+          isSaved: row.isSaved,
+          totalTeams: row.totalTeams,
+          completedAt: row.completedAt,
+          finalizationVersion: row.finalizationVersion || 1,
+          finalizedByPhone: row.finalizedByPhone || '',
+        })),
+        latestRun: latestRun
+          ? {
+              _id: String(latestRun._id),
+              status: latestRun.status,
+              startedAt: latestRun.startedAt,
+              completedAt: latestRun.completedAt,
+              summary: latestRun.summary,
+              errorMessage: latestRun.errorMessage || '',
+            }
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching finalization status:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch finalization status' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  let finalizationRunId: mongoose.Types.ObjectId | null = null;
+
+  try {
+    await dbConnect();
+
+    const auth = getAuthPayload(request);
+    if (!auth || auth.phone !== ADMIN_PHONE) {
+      return NextResponse.json(
+        { success: false, error: 'Only admin can save final match results' },
+        { status: 403 }
+      );
+    }
+
+    const body: FinalizeRequestBody = await request.json();
+    const matchId = body.matchId;
+    const contestId = body.contestId;
+    const force = body.force === true;
+
+    if (!matchId || !mongoose.Types.ObjectId.isValid(matchId)) {
+      return NextResponse.json(
+        { success: false, error: 'Valid matchId is required' },
+        { status: 400 }
+      );
+    }
+
+    if (contestId && !mongoose.Types.ObjectId.isValid(contestId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid contestId format' },
+        { status: 400 }
+      );
+    }
+
+    const matchObjectId = new mongoose.Types.ObjectId(matchId);
+    const match = await Match.findById(matchObjectId).lean<any>();
 
     if (!match) {
       return NextResponse.json(
@@ -40,236 +320,360 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find all contests for this match
-    const contests = contestId
-      ? [await Contest.findById(contestId)]
-      : await Contest.find({ matchId: matchObjectId });
+    const computedStatus = getMatchStatus(new Date(match.date), match.status);
+    if (computedStatus !== 'completed') {
+      return NextResponse.json(
+        { success: false, error: 'Match is not completed yet. Finalization is allowed only after completion.' },
+        { status: 400 }
+      );
+    }
+
+    const contestFilter: Record<string, unknown> = { matchId: matchObjectId };
+    if (contestId) {
+      contestFilter._id = new mongoose.Types.ObjectId(contestId);
+    }
+
+    const contests = await Contest.find(contestFilter).lean<any[]>();
+    if (contests.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No contests found for this match' },
+        { status: 404 }
+      );
+    }
+
+    const run = await FinalizationRun.create({
+      matchId: matchObjectId,
+      contestId: contestId ? new mongoose.Types.ObjectId(contestId) : undefined,
+      mode: contestId ? 'single' : 'all',
+      status: 'running',
+      triggeredByUserId:
+        auth.userId && mongoose.Types.ObjectId.isValid(auth.userId)
+          ? new mongoose.Types.ObjectId(auth.userId)
+          : undefined,
+      triggeredByPhone: auth.phone,
+      startedAt: new Date(),
+      summary: {
+        totalContests: contests.length,
+        savedContests: 0,
+        skippedContests: 0,
+        totalTeams: 0,
+      },
+    });
+    finalizationRunId = run._id;
 
     const results: any[] = [];
+    let totalTeamsSaved = 0;
+    let savedContests = 0;
+    let skippedContests = 0;
 
-    for (const contest of contests) {
-      if (!contest) continue;
+    await runWithOptionalTransaction(async (session) => {
+      const dbOpts = session ? { session } : undefined;
 
-      // Check if already saved
-      const existingResult = await ContestFinalResult.findOne({ contestId: contest._id });
-      if (existingResult?.isSaved) {
-        results.push({
-          contestId: contest._id.toString(),
-          message: 'Already saved',
-          skipped: true
-        });
-        continue;
+      const matchScores = await MatchScore.find({ matchId: matchObjectId }, null, dbOpts).lean<LeanMatchScore[]>();
+      const scoreByPlayerId = new Map<string, LeanMatchScore>();
+      const scoreByExternalId = new Map<string, LeanMatchScore>();
+      const allScorePlayerIds: mongoose.Types.ObjectId[] = [];
+
+      for (const score of matchScores) {
+        const key = String(score.playerId);
+        scoreByPlayerId.set(key, score);
+        if (score.externalId) {
+          scoreByExternalId.set(String(score.externalId), score);
+        }
+        allScorePlayerIds.push(score.playerId);
       }
 
-      // Get all teams for this contest
-      const teams = await Team.find({ contestId: contest._id });
-      const teamResults: mongoose.Types.ObjectId[] = [];
+      const scorePlayers = await Player.find({ _id: { $in: allScorePlayerIds } }, null, dbOpts).lean<any[]>();
+      const scorePlayerMap = new Map<string, any>();
+      for (const player of scorePlayers) {
+        scorePlayerMap.set(String(player._id), player);
+      }
 
-      // Get all player scores for this match
-      const matchScores = await MatchScore.find({ matchId: matchObjectId }).lean();
-      const scoresMap = new Map<string, any>();
-      matchScores.forEach(score => {
-        scoresMap.set(score.playerId.toString(), score);
-      });
+      if (matchScores.length > 0) {
+        const snapshotOps = matchScores.map((score) => {
+          const player = scorePlayerMap.get(String(score.playerId));
+          return {
+            updateOne: {
+              filter: { matchId: matchObjectId, playerId: score.playerId },
+              update: {
+                $set: {
+                  externalId: score.externalId || player?.externalId || '',
+                  playerName: player?.name || '',
+                  role: player?.role || '',
+                  team: player?.team || '',
+                  points: round2(score.points || 0),
+                  stats: toStatsSnapshot(score.stats),
+                  finalizedAt: new Date(),
+                  finalizationRunId,
+                },
+              },
+              upsert: true,
+            },
+          };
+        });
 
-      // Process each team
-      const processedTeams = [];
+        await MatchPlayerFinalScoreSnapshot.bulkWrite(snapshotOps, dbOpts);
+      }
 
-      for (const team of teams) {
-        let totalPoints = 0;
-        const captainObjectId = team.captainId;
-        const viceCaptainObjectId = team.viceCaptainId;
+      for (const contest of contests) {
+        const contestObjectId = new mongoose.Types.ObjectId(String(contest._id));
+        const existingResult = await ContestFinalResult.findOne(
+          { contestId: contestObjectId },
+          null,
+          dbOpts
+        ).lean<any>();
 
-        const playerResults = [];
+        if (existingResult?.isSaved && !force) {
+          skippedContests += 1;
+          results.push({
+            contestId: String(contest._id),
+            contestName: contest.name,
+            message: 'Already saved (use force=true to rebuild)',
+            skipped: true,
+          });
+          continue;
+        }
 
-        for (const teamPlayer of team.players) {
-          const playerIdStr = teamPlayer.playerId.toString();
-          const matchScore = scoresMap.get(playerIdStr);
+        await TeamPlayerFinalResult.deleteMany({ contestId: contestObjectId }, dbOpts);
+        await TeamFinalResult.deleteMany({ contestId: contestObjectId }, dbOpts);
 
-          // Get player details
-          const player = await Player.findById(teamPlayer.playerId);
+        const teams = await Team.find({ contestId: contestObjectId }, null, dbOpts).lean<any[]>();
+        const userIds = Array.from(new Set(teams.map((team) => String(team.userId))))
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
 
-          // Determine multiplier
-          let multiplier = 1;
-          let isCaptain = false;
-          let isViceCaptain = false;
+        const users = await User.find({ _id: { $in: userIds } }, null, dbOpts).lean<any[]>();
+        const userDisplayMap = new Map<string, string>();
+        for (const user of users) {
+          userDisplayMap.set(String(user._id), user.displayName || 'Unknown');
+        }
 
-          if (captainObjectId.equals(teamPlayer.playerId)) {
-            multiplier = 2;
-            isCaptain = true;
-          } else if (viceCaptainObjectId.equals(teamPlayer.playerId)) {
-            multiplier = 1.5;
-            isViceCaptain = true;
+        const processedTeams: Array<{
+          teamId: mongoose.Types.ObjectId;
+          teamName: string;
+          userId: mongoose.Types.ObjectId;
+          userName: string;
+          totalPoints: number;
+          players: TeamPlayerComputation[];
+        }> = [];
+
+        for (const team of teams) {
+          const captainId = String(team.captainId);
+          const viceCaptainId = String(team.viceCaptainId);
+          let totalPoints = 0;
+          const players: TeamPlayerComputation[] = [];
+
+          for (const teamPlayer of team.players || []) {
+            const playerId = new mongoose.Types.ObjectId(String(teamPlayer.playerId));
+            const playerKey = String(playerId);
+            const teamExternalId = String(teamPlayer.externalId || '');
+            const score =
+              scoreByPlayerId.get(playerKey) ||
+              (teamExternalId ? scoreByExternalId.get(teamExternalId) : undefined);
+            const resolvedPlayerId = score?.playerId
+              ? new mongoose.Types.ObjectId(String(score.playerId))
+              : playerId;
+
+            const basePoints = round2(score?.points || 0);
+            const isCaptain = playerKey === captainId;
+            const isViceCaptain = playerKey === viceCaptainId;
+            const multiplier = isCaptain ? 2 : isViceCaptain ? 1.5 : 1;
+            const finalPoints = round2(basePoints * multiplier);
+            const stats = toStatsSnapshot(score?.stats);
+            const breakdown = buildBreakdown(stats, basePoints, isCaptain, isViceCaptain);
+
+            totalPoints += finalPoints;
+            players.push({
+              playerId: resolvedPlayerId,
+              externalId: teamExternalId || score?.externalId || '',
+              playerName: teamPlayer.name,
+              role: teamPlayer.role,
+              creditCost: toNum(teamPlayer.creditCost),
+              basePoints,
+              finalPoints,
+              multiplier,
+              isCaptain,
+              isViceCaptain,
+              breakdown,
+              stats,
+            });
           }
 
-          const playerPoints = matchScore ? matchScore.points : 0;
-          const finalPoints = playerPoints * multiplier;
-          totalPoints += finalPoints;
-
-          // Create breakdown based on stats
-          const breakdown: IPlayerPointsBreakdown[] = [];
-
-          if (matchScore?.stats) {
-            const stats = matchScore.stats;
-
-            // Batting breakdown
-            if (stats.runs > 0) {
-              breakdown.push({ category: 'Batting', description: `${stats.runs} runs (+1 each)`, points: stats.runs });
-            }
-            if (stats.fours > 0) {
-              breakdown.push({ category: 'Batting', description: `${stats.fours} fours (+4 each)`, points: stats.fours * 4 });
-            }
-            if (stats.sixes > 0) {
-              breakdown.push({ category: 'Batting', description: `${stats.sixes} sixes (+6 each)`, points: stats.sixes * 6 });
-            }
-
-            // Milestones
-            if (stats.runs >= 100) {
-              breakdown.push({ category: 'Milestone', description: 'Century Bonus', points: 16 });
-            } else if (stats.runs >= 75) {
-              breakdown.push({ category: 'Milestone', description: '75+ Run Bonus', points: 12 });
-              breakdown.push({ category: 'Milestone', description: 'Half-Century Bonus', points: 8 });
-            } else if (stats.runs >= 50) {
-              breakdown.push({ category: 'Milestone', description: 'Half-Century Bonus', points: 8 });
-            } else if (stats.runs >= 25) {
-              breakdown.push({ category: 'Milestone', description: '25+ Run Bonus', points: 4 });
-            }
-
-            // Strike rate
-            if (stats.balls >= 10 && stats.strikeRate) {
-              if (stats.strikeRate > 170) {
-                breakdown.push({ category: 'Strike Rate', description: 'SR > 170 (bonus)', points: 6 });
-              } else if (stats.strikeRate > 150) {
-                breakdown.push({ category: 'Strike Rate', description: 'SR 150.01-170 (bonus)', points: 4 });
-              } else if (stats.strikeRate >= 130) {
-                breakdown.push({ category: 'Strike Rate', description: 'SR 130-150 (bonus)', points: 2 });
-              } else if (stats.strikeRate <= 70) {
-                breakdown.push({ category: 'Strike Rate', description: 'SR <=70 (penalty)', points: -2 });
-              }
-            }
-
-            // Bowling breakdown
-            if (stats.dots > 0) {
-              breakdown.push({ category: 'Bowling', description: `${stats.dots} dot balls (+1 each)`, points: stats.dots });
-            }
-            if (stats.wickets > 0) {
-              breakdown.push({ category: 'Bowling', description: `${stats.wickets} wickets (+30 each)`, points: stats.wickets * 30 });
-            }
-            if (stats.maidens > 0) {
-              breakdown.push({ category: 'Bowling', description: `${stats.maidens} maiden over(s) (+12 each)`, points: stats.maidens * 12 });
-            }
-            if (stats.economy && stats.overs >= 2) {
-              if (stats.economy < 5) {
-                breakdown.push({ category: 'Economy', description: `Economy <5 (bonus)`, points: 6 });
-              } else if (stats.economy < 6) {
-                breakdown.push({ category: 'Economy', description: `Economy 5-5.99 (bonus)`, points: 4 });
-              } else if (stats.economy <= 7) {
-                breakdown.push({ category: 'Economy', description: `Economy 6-7 (bonus)`, points: 2 });
-              }
-            }
-
-            // Fielding
-            if (stats.catches > 0) {
-              breakdown.push({ category: 'Fielding', description: `${stats.catches} catch(es) (+8 each)`, points: stats.catches * 8 });
-              if (stats.catches >= 3) {
-                breakdown.push({ category: 'Fielding', description: '3+ Catches Bonus', points: 4 });
-              }
-            }
-            if (stats.stumpings > 0) {
-              breakdown.push({ category: 'Fielding', description: `${stats.stumpings} stumping(s) (+12 each)`, points: stats.stumpings * 12 });
-            }
-            if (stats.runOuts > 0) {
-              breakdown.push({ category: 'Fielding', description: `${stats.runOuts} run-out(s)`, points: stats.runOuts * 6 });
-            }
-
-            // Other
-            if (stats.playingXI === 1) {
-              breakdown.push({ category: 'Other', description: 'Playing XI', points: 4 });
-            }
-          }
-
-          // Add multiplier note if captain/vice-captain
-          if (isCaptain) {
-            breakdown.push({ category: 'Multiplier', description: 'Captain (2x)', points: Math.round(playerPoints) });
-          } else if (isViceCaptain) {
-            breakdown.push({ category: 'Multiplier', description: 'Vice-Captain (1.5x)', points: Math.round(playerPoints * 0.5) });
-          }
-
-          playerResults.push({
-            playerId: teamPlayer.playerId,
-            externalId: player?.externalId || '',
-            playerName: teamPlayer.name,
-            role: teamPlayer.role,
-            creditCost: teamPlayer.creditCost ?? 0,
-            points: Math.round(finalPoints * 100) / 100,
-            multiplier,
-            isCaptain,
-            isViceCaptain,
-            breakdown,
+          processedTeams.push({
+            teamId: team._id,
+            teamName: team.name,
+            userId: team.userId,
+            userName: userDisplayMap.get(String(team.userId)) || 'Unknown',
+            totalPoints: round2(totalPoints),
+            players,
           });
         }
 
-        // Get user details
-        const user = await User.findById(team.userId);
+        processedTeams.sort((a, b) => b.totalPoints - a.totalPoints);
 
-        // Create team final result
-        const teamFinalResult = await TeamFinalResult.create({
-          contestId: contest._id,
-          userId: team.userId,
-          teamId: team._id,
-          teamName: team.name,
-          userName: user?.displayName || 'Unknown',
-          totalPoints: Math.round(totalPoints * 100) / 100,
-          rank: 0, // Will update after sorting
-          players: playerResults,
+        const contestFinalDoc = await ContestFinalResult.findOneAndUpdate(
+          { contestId: contestObjectId },
+          {
+            $set: {
+              matchId: matchObjectId,
+              contestId: contestObjectId,
+              contestName: contest.name,
+              matchName: `${match.team1.shortName} vs ${match.team2.shortName}`,
+              entryFee: contest.entryFee,
+              prizePool: contest.prizePool,
+              maxParticipants: contest.maxParticipants,
+              completedAt: new Date(),
+              totalTeams: processedTeams.length,
+              isSaved: true,
+              finalizationVersion: existingResult ? toNum(existingResult.finalizationVersion) + 1 : 1,
+              finalizedByUserId:
+                auth.userId && mongoose.Types.ObjectId.isValid(auth.userId)
+                  ? new mongoose.Types.ObjectId(auth.userId)
+                  : undefined,
+              finalizedByPhone: auth.phone,
+              finalizationRunId,
+            },
+          },
+          {
+            ...dbOpts,
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true,
+          }
+        ).lean<any>();
+
+        if (contest.status !== 'completed') {
+          await Contest.updateOne(
+            { _id: contestObjectId },
+            { $set: { status: 'completed' } },
+            dbOpts
+          );
+        }
+
+        const teamFinalDocs = processedTeams.map((teamRow, index) => ({
+          matchId: matchObjectId,
+          contestId: contestObjectId,
+          contestFinalResultId: contestFinalDoc._id,
+          userId: teamRow.userId,
+          teamId: teamRow.teamId,
+          teamName: teamRow.teamName,
+          userName: teamRow.userName,
+          totalPoints: teamRow.totalPoints,
+          rank: index + 1,
+          players: teamRow.players.map((playerRow) => ({
+            playerId: playerRow.playerId,
+            externalId: playerRow.externalId,
+            playerName: playerRow.playerName,
+            role: playerRow.role,
+            creditCost: playerRow.creditCost,
+            points: playerRow.finalPoints,
+            multiplier: playerRow.multiplier,
+            isCaptain: playerRow.isCaptain,
+            isViceCaptain: playerRow.isViceCaptain,
+            breakdown: playerRow.breakdown,
+          })),
+          finalizedAt: new Date(),
+        }));
+
+        const insertedTeamFinalDocs = teamFinalDocs.length > 0
+          ? session
+            ? await TeamFinalResult.insertMany(teamFinalDocs, { session })
+            : await TeamFinalResult.insertMany(teamFinalDocs)
+          : [];
+
+        const playerFinalRows = insertedTeamFinalDocs.flatMap((teamDoc, index) => {
+          const teamRow = processedTeams[index];
+          return teamRow.players.map((playerRow) => ({
+            matchId: matchObjectId,
+            contestId: contestObjectId,
+            contestFinalResultId: contestFinalDoc._id,
+            teamFinalResultId: teamDoc._id,
+            userId: teamRow.userId,
+            teamId: teamRow.teamId,
+            rankSnapshot: teamDoc.rank,
+            playerId: playerRow.playerId,
+            externalId: playerRow.externalId,
+            playerName: playerRow.playerName,
+            role: playerRow.role,
+            creditCost: playerRow.creditCost,
+            basePoints: playerRow.basePoints,
+            finalPoints: playerRow.finalPoints,
+            multiplier: playerRow.multiplier,
+            isCaptain: playerRow.isCaptain,
+            isViceCaptain: playerRow.isViceCaptain,
+            stats: playerRow.stats,
+            breakdown: playerRow.breakdown,
+            finalizedAt: new Date(),
+          }));
         });
 
-        teamResults.push(teamFinalResult._id);
-        processedTeams.push({
-          _id: teamFinalResult._id,
-          teamName: team.name,
-          userName: user?.displayName || 'Unknown',
-          totalPoints: Math.round(totalPoints * 100) / 100,
+        if (playerFinalRows.length > 0) {
+          if (session) {
+            await TeamPlayerFinalResult.insertMany(playerFinalRows, { session });
+          } else {
+            await TeamPlayerFinalResult.insertMany(playerFinalRows);
+          }
+        }
+
+        totalTeamsSaved += processedTeams.length;
+        savedContests += 1;
+
+        const topTeam = processedTeams[0]
+          ? {
+              teamName: processedTeams[0].teamName,
+              userName: processedTeams[0].userName,
+              totalPoints: processedTeams[0].totalPoints,
+              rank: 1,
+            }
+          : null;
+
+        results.push({
+          contestId: String(contest._id),
+          contestName: contest.name,
+          matchName: `${match.team1.shortName} vs ${match.team2.shortName}`,
+          totalTeams: processedTeams.length,
+          topTeam,
+          skipped: false,
         });
       }
+    });
 
-      // Sort teams by points and update ranks
-      const sortedTeams = processedTeams.sort((a, b) => b.totalPoints - a.totalPoints);
-      for (let i = 0; i < sortedTeams.length; i++) {
-        await TeamFinalResult.findByIdAndUpdate(sortedTeams[i]._id, { rank: i + 1 });
-      }
-
-      // Create contest final result
-      const matchName = `${match.team1.shortName} vs ${match.team2.shortName}`;
-
-      await ContestFinalResult.create({
-        matchId: matchObjectId,
-        contestId: contest._id,
-        contestName: contest.name,
-        matchName,
-        entryFee: contest.entryFee,
-        prizePool: contest.prizePool,
-        maxParticipants: contest.maxParticipants,
+    await FinalizationRun.findByIdAndUpdate(finalizationRunId, {
+      $set: {
+        status: 'completed',
         completedAt: new Date(),
-        totalTeams: teams.length,
-        isSaved: true,
-      });
-
-      results.push({
-        contestId: contest._id.toString(),
-        contestName: contest.name,
-        matchName,
-        totalTeams: teams.length,
-        topTeam: sortedTeams[0] || null,
-        skipped: false,
-      });
-    }
+        summary: {
+          totalContests: contests.length,
+          savedContests,
+          skippedContests,
+          totalTeams: totalTeamsSaved,
+        },
+      },
+    });
 
     return NextResponse.json({
       success: true,
       data: results,
+      meta: {
+        runId: finalizationRunId?.toString() || null,
+        totalContests: contests.length,
+        savedContests,
+        skippedContests,
+        totalTeams: totalTeamsSaved,
+        force,
+      },
     });
   } catch (error) {
+    if (finalizationRunId) {
+      await FinalizationRun.findByIdAndUpdate(finalizationRunId, {
+        $set: {
+          status: 'failed',
+          completedAt: new Date(),
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      }).catch(() => undefined);
+    }
+
     console.error('Error saving final results:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to save final results' },
