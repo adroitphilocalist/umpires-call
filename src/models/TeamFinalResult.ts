@@ -20,7 +20,9 @@ export interface ITeamPlayerResult {
 }
 
 export interface ITeamFinalResult extends Document {
+  matchId: mongoose.Types.ObjectId;
   contestId: mongoose.Types.ObjectId;
+  contestFinalResultId?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   teamId: mongoose.Types.ObjectId;
   teamName: string;
@@ -28,6 +30,7 @@ export interface ITeamFinalResult extends Document {
   totalPoints: number;
   rank: number;
   players: ITeamPlayerResult[];
+  finalizedAt: Date;
   createdAt: Date;
 }
 
@@ -58,7 +61,9 @@ const TeamPlayerResultSchema = new Schema<ITeamPlayerResult>(
 
 const TeamFinalResultSchema = new Schema<ITeamFinalResult>(
   {
+    matchId: { type: Schema.Types.ObjectId, ref: 'Match', required: true, index: true },
     contestId: { type: Schema.Types.ObjectId, ref: 'Contest', required: true, index: true },
+    contestFinalResultId: { type: Schema.Types.ObjectId, ref: 'ContestFinalResult', index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
     teamName: { type: String, required: true },
@@ -66,6 +71,7 @@ const TeamFinalResultSchema = new Schema<ITeamFinalResult>(
     totalPoints: { type: Number, default: 0 },
     rank: { type: Number, default: 0 },
     players: [TeamPlayerResultSchema],
+    finalizedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -73,6 +79,8 @@ const TeamFinalResultSchema = new Schema<ITeamFinalResult>(
 // Compound index
 TeamFinalResultSchema.index({ contestId: 1, rank: 1 });
 TeamFinalResultSchema.index({ userId: 1 });
+TeamFinalResultSchema.index({ matchId: 1, userId: 1 });
+TeamFinalResultSchema.index({ matchId: 1, rank: 1 });
 
 export const TeamFinalResult = mongoose.models.TeamFinalResult ||
   mongoose.model<ITeamFinalResult>('TeamFinalResult', TeamFinalResultSchema);

@@ -11,6 +11,10 @@ export interface IContestFinalResult extends Document {
   completedAt: Date;
   totalTeams: number;
   isSaved: boolean;
+  finalizationVersion: number;
+  finalizedByUserId?: mongoose.Types.ObjectId;
+  finalizedByPhone?: string;
+  finalizationRunId?: mongoose.Types.ObjectId;
   createdAt: Date;
 }
 
@@ -26,9 +30,16 @@ const ContestFinalResultSchema = new Schema<IContestFinalResult>(
     completedAt: { type: Date, default: Date.now },
     totalTeams: { type: Number, default: 0 },
     isSaved: { type: Boolean, default: false },
+    finalizationVersion: { type: Number, default: 1 },
+    finalizedByUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+    finalizedByPhone: { type: String, default: '' },
+    finalizationRunId: { type: Schema.Types.ObjectId, ref: 'FinalizationRun' },
   },
   { timestamps: true }
 );
+
+ContestFinalResultSchema.index({ matchId: 1, completedAt: -1 });
+ContestFinalResultSchema.index({ finalizedByUserId: 1, completedAt: -1 });
 
 export const ContestFinalResult = mongoose.models.ContestFinalResult ||
   mongoose.model<IContestFinalResult>('ContestFinalResult', ContestFinalResultSchema);
