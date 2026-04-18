@@ -117,6 +117,11 @@ export default function DailyLeaderboardPage() {
       return best;
     }, null);
 
+    const mostWinsParticipant = allRows.reduce<LeaderboardRow | null>((best, row) => {
+      if (!best || row.wins > best.wins) return row;
+      return best;
+    }, null);
+
     const bestWinPct = allRows.reduce<LeaderboardRow | null>((best, row) => {
       if (row.mp <= 0) return best;
       if (!best || row.winPct > best.winPct) return row;
@@ -161,6 +166,7 @@ export default function DailyLeaderboardPage() {
       profitableCount,
       profitablePct,
       mostActive,
+      mostWinsParticipant,
       bestWinPct,
       highestProfit,
       biggestDrawdown,
@@ -504,6 +510,11 @@ export default function DailyLeaderboardPage() {
                     <p className="text-xs text-text-secondary">Net Spread</p>
                     <p className="text-xl font-semibold text-text-primary">{analytics.netSpread}</p>
                     <p className="text-[11px] text-text-secondary mt-1">Difference between top and bottom net</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/20 bg-surface/80 p-3">
+                    <p className="text-xs text-text-secondary flex items-center gap-1"><Trophy size={12} /> Most Wins</p>
+                    <p className="text-xl font-semibold text-warning-text">{analytics.mostWinsParticipant?.wins ?? 0}</p>
+                    <p className="text-[11px] text-text-secondary mt-1">{analytics.mostWinsParticipant?.name || 'N/A'}</p>
                   </div>
                 </div>
 
