@@ -6,6 +6,9 @@ import { User } from '@/models/User';
 
 const LEADERBOARD_SLUG = 'global';
 const EDITOR_PHONES = new Set(['+919163065575', '+916291299136']);
+const NAME_EMAIL_OVERRIDES: Record<string, string> = {
+  sayanta: 'sayantamondalrup@gmail.com',
+};
 
 const INITIAL_ENTRIES = [
   {
@@ -38,7 +41,7 @@ const INITIAL_ENTRIES = [
   },
   {
     name: 'Sayanta',
-    email: '',
+    email: 'sayantamondalrup@gmail.com',
     mp: 2,
     gain: 20,
     winPct: 50,
@@ -61,6 +64,7 @@ type RankedRow = {
   given: number;
   gain: number;
   net: number;
+  wins: number;
   winPct: number;
   rank: number;
 };
@@ -103,6 +107,7 @@ function buildRankedRows(
     const gain = toFinite(entry.gain, 0);
     const net = gain - given;
     const winPct = Math.max(0, Number(toFinite(entry.winPct, 0).toFixed(2)));
+    const wins = Math.max(0, Math.round((mp * winPct) / 100));
     const userId = entry.userId?.toString() || '';
 
     return {
@@ -114,13 +119,26 @@ function buildRankedRows(
       given,
       gain,
       net,
+      wins,
       winPct,
       rank: 0,
     };
   });
 
   hydrated.sort((a, b) => {
-    if (b.net !== a.net) return b.net - a.net;
+    if (b.net !== a.net) {
+      const netLeader = a.net > b.net ? a : b;
+      const other = netLeader === a ? b : a;
+      const mpGap = other.mp - netLeader.mp;
+
+      // Special rule: higher net leads only when it does not come with an MP deficit greater than 4.
+      if (mpGap > 4) {
+        return netLeader === a ? 1 : -1;
+      }
+
+      return netLeader === a ? -1 : 1;
+    }
+
     if (b.mp !== a.mp) return b.mp - a.mp;
     if (b.winPct !== a.winPct) return b.winPct - a.winPct;
     return a.name.localeCompare(b.name);
@@ -154,24 +172,34 @@ async function ensureSeededLeaderboard() {
 }
 
 async function syncUserLinks(board: any) {
-  const unresolved = (board.entries || []).filter((entry: any) => !entry.userId && entry.email);
-  if (unresolved.length === 0) return;
-
-  const emails = unresolved.map((entry: any) => String(entry.email).toLowerCase());
-  const users = await User.find({ email: { $in: emails } })
-    .select('_id email')
-    .lean<Array<{ _id: { toString: () => string }; email: string }>>();
-
-  const byEmail = new Map<string, string>();
-  users.forEach((u) => byEmail.set(String(u.email || '').toLowerCase(), u._id.toString()));
-
   let changed = false;
+
   for (const entry of board.entries || []) {
-    if (!entry.userId && entry.email) {
-      const linkedId = byEmail.get(String(entry.email).toLowerCase());
-      if (linkedId) {
-        entry.userId = linkedId;
-        changed = true;
+    const normalizedName = String(entry.name || '').trim().toLowerCase();
+    const overrideEmail = NAME_EMAIL_OVERRIDES[normalizedName];
+    if (overrideEmail && String(entry.email || '').trim().toLowerCase() !== overrideEmail) {
+      entry.email = overrideEmail;
+      changed = true;
+    }
+  }
+
+  const unresolved = (board.entries || []).filter((entry: any) => !entry.userId && entry.email);
+  if (unresolved.length > 0) {
+    const emails = unresolved.map((entry: any) => String(entry.email).toLowerCase());
+    const users = await User.find({ email: { $in: emails } })
+      .select('_id email')
+      .lean<Array<{ _id: { toString: () => string }; email: string }>>();
+
+    const byEmail = new Map<string, string>();
+    users.forEach((u) => byEmail.set(String(u.email || '').toLowerCase(), u._id.toString()));
+
+    for (const entry of board.entries || []) {
+      if (!entry.userId && entry.email) {
+        const linkedId = byEmail.get(String(entry.email).toLowerCase());
+        if (linkedId) {
+          entry.userId = linkedId;
+          changed = true;
+        }
       }
     }
   }
@@ -263,7 +291,16 @@ export async function PUT(request: Request) {
       target.email = email;
       target.mp = Math.max(0, Math.floor(toFinite(row.mp, target.mp || 0)));
       target.gain = toFinite(row.gain, target.gain || 0);
-      target.winPct = Math.max(0, Number(toFinite(row.winPct, target.winPct || 0).toFixed(2)));
+
+      const hasWinsInput = row.wins !== undefined && row.wins !== null && row.wins !== '';
+      if (hasWinsInput) {
+        const wins = Math.max(0, Math.floor(toFinite(row.wins, 0)));
+        const boundedWins = target.mp > 0 ? Math.min(wins, target.mp) : 0;
+        target.winPct = target.mp > 0 ? Number(((boundedWins / target.mp) * 100).toFixed(2)) : 0;
+      } else {
+        target.winPct = Math.max(0, Number(toFinite(row.winPct, target.winPct || 0).toFixed(2)));
+      }
+
       target.userId = email ? byEmail.get(email) : undefined;
     }
 
