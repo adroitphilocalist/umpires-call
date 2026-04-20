@@ -6,6 +6,7 @@ import { useAuthStore, initializeAuth } from '@/store/authStore';
 // No longer using localStorage for token - using cookies only
 // Keep USER_KEY only for backwards compatibility if needed
 const USER_KEY = 'umpires_call_user';
+const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 export function useAuth() {
   const { user, dbUser, isLoading, isAuthenticated, setUser, setDbUser, setToken, logout } = useAuthStore();
@@ -20,10 +21,9 @@ export function useAuth() {
     // Store user in localStorage (for initial load)
     localStorage.setItem(USER_KEY, JSON.stringify(userData));
     
-    // Set cookie for middleware and auth persistence
-    // Use SameSite=Strict for better security, or Lax for compatibility
-    document.cookie = `auth-token=${token}; path=/; max-age=${60 * 60 * 12}; SameSite=Strict`;
-    document.cookie = `user-data=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=${60 * 60 * 12}; SameSite=Strict`;
+    // Keep cookie TTL aligned with JWT expiry (7 days).
+    document.cookie = `auth-token=${token}; path=/; max-age=${AUTH_COOKIE_MAX_AGE_SECONDS}; SameSite=Strict`;
+    document.cookie = `user-data=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=${AUTH_COOKIE_MAX_AGE_SECONDS}; SameSite=Strict`;
     
     // Update Zustand state
     setToken(token);
