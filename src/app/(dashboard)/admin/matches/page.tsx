@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Navbar, Card, CardHeader, CardTitle, CardContent, Button, Input, Badge, PageLoader, Modal } from '@/components/ui';
 import { Match } from '@/types';
-import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2, PlusCircle, ClipboardList, Database } from 'lucide-react';
+import { Calendar, Edit3, Save, X, Zap, CheckCircle, Loader2, PlusCircle, ClipboardList, Database, Copy, Check } from 'lucide-react';
 
 interface MatchWithScores extends Match {
   hasScores?: boolean;
@@ -64,6 +64,7 @@ export default function AdminMatchesPage() {
   const [lineupError, setLineupError] = useState<string | null>(null);
   const [finalizingMatchId, setFinalizingMatchId] = useState<string | null>(null);
   const [finalizedMatchIds, setFinalizedMatchIds] = useState<Record<string, boolean>>({});
+  const [copiedScorecardUrlFor, setCopiedScorecardUrlFor] = useState<string | null>(null);
 
   const formatDateTimeLocal = (value: string | Date) => {
     const date = new Date(value);
@@ -434,6 +435,18 @@ export default function AdminMatchesPage() {
     }
   };
 
+  const copyScorecardUrl = async (matchId: string, url: string) => {
+    if (!url) return;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedScorecardUrlFor(matchId);
+      setTimeout(() => setCopiedScorecardUrlFor((current) => (current === matchId ? null : current)), 1800);
+    } catch (error) {
+      console.error('Failed to copy scorecard URL:', error);
+    }
+  };
+
   const renderLineupList = (entries: LineupPlayerEntry[]) => {
     return (
       <div className="space-y-1.5">
@@ -560,7 +573,7 @@ export default function AdminMatchesPage() {
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Status</th>
                     <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Scorecard URL</th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-text-primary">Cricbuzz ID</th>
-                  <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Points</th>
+                  {/* <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Points</th> */}
                   <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">API Calls</th>
                   <th className="text-center px-4 py-3 text-sm font-semibold text-text-primary">Actions</th>
                 </tr>
@@ -616,9 +629,29 @@ export default function AdminMatchesPage() {
                           className="text-sm"
                         />
                       ) : (
-                        <span className="text-sm text-text-secondary font-mono">
-                          {match.scorecardUrl || '-'}
-                        </span>
+                        match.scorecardUrl ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyScorecardUrl(match._id, match.scorecardUrl as string)}
+                            className="text-xs whitespace-nowrap"
+                            title="Copy scorecard URL"
+                          >
+                            {copiedScorecardUrlFor === match._id ? (
+                              <>
+                                <Check size={13} className="mr-1 text-success-text" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} className="mr-1" />
+                                Copy URL
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-text-secondary">-</span>
+                        )
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -635,11 +668,11 @@ export default function AdminMatchesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    {/* <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
                         {(match as any).apiCallCount || 0}
                       </div>
-                    </td>
+                    </td> */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center">
                         {match.hasScores ? (
