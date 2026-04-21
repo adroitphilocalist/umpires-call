@@ -10,6 +10,16 @@ const NAME_EMAIL_OVERRIDES: Record<string, string> = {
   sayanta: 'sayantamondalrup@gmail.com',
 };
 
+const REQUIRED_ENTRIES = [
+  {
+    name: 'Souhardya',
+    email: 'souhardyanandy47@gmail.com',
+    mp: 1,
+    gain: 0,
+    winPct: 0,
+  },
+];
+
 const INITIAL_ENTRIES = [
   {
     name: 'Barnik',
@@ -50,6 +60,13 @@ const INITIAL_ENTRIES = [
     name: 'Sirsha',
     email: 'shirsamaitra@gmail.com',
     mp: 3,
+    gain: 0,
+    winPct: 0,
+  },
+  {
+    name: 'Souhardya',
+    email: 'souhardyanandy47@gmail.com',
+    mp: 1,
     gain: 0,
     winPct: 0,
   },
@@ -173,6 +190,22 @@ async function ensureSeededLeaderboard() {
 
 async function syncUserLinks(board: any) {
   let changed = false;
+
+  for (const requiredEntry of REQUIRED_ENTRIES) {
+    const targetEmail = String(requiredEntry.email || '').trim().toLowerCase();
+    const targetName = String(requiredEntry.name || '').trim().toLowerCase();
+
+    const exists = (board.entries || []).some((entry: any) => {
+      const existingEmail = String(entry.email || '').trim().toLowerCase();
+      const existingName = String(entry.name || '').trim().toLowerCase();
+      return (!!targetEmail && existingEmail === targetEmail) || (!!targetName && existingName === targetName);
+    });
+
+    if (!exists) {
+      board.entries.push({ ...requiredEntry });
+      changed = true;
+    }
+  }
 
   for (const entry of board.entries || []) {
     const normalizedName = String(entry.name || '').trim().toLowerCase();
