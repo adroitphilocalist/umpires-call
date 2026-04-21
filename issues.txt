@@ -1,3 +1,0 @@
-#4 Users shoud be able to login using Username
-#5 Display Username in the profile
-#6 Users may be able to create multiple Teams for the same match
